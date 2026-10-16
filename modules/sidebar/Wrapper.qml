@@ -15,7 +15,14 @@ Item {
     property real offsetScale: shouldBeActive ? 0 : 1
 
     visible: offsetScale < 1
-    anchors.rightMargin: (-implicitWidth - 5) * offsetScale
+    // Distance the drawer sits off its edge while hidden. Exposed so the host
+    // (drawers/Panels.qml) can apply it to whichever edge the sidebar is
+    // anchored to, using the same offsetScale animation either way.
+    readonly property real slideOffset: (-implicitWidth - 5) * offsetScale
+    // Same idea for the placements that reveal the drawer from the top or
+    // bottom edge (bottom/right taskbar), which travel a full column height.
+    readonly property real slideOffsetVertical: (-height - 5) * offsetScale
+    anchors.rightMargin: root.slideOffset
     implicitWidth: Tokens.sizes.sidebar.width
     opacity: 1 - offsetScale
 

@@ -21,6 +21,7 @@ StyledClippingRect {
     readonly property int activeWsId: monitor.activeWorkspace?.id ?? 1
     readonly property int activeWsIdx: workspaceIndex(activeWsId)
     readonly property int shown: Math.max(1, Config.bar.workspaces.shown)
+    readonly property bool horizontal: BarState.horizontal
 
     readonly property var wsIds: {
         if (Config.bar.workspaces.showUnoccupied)
@@ -65,8 +66,8 @@ StyledClippingRect {
         return index % shown;
     }
 
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: workspaces.layoutHeight + workspaces.anchors.margins * 2
+    implicitWidth: horizontal ? hrow.implicitWidth + Tokens.padding.extraSmall * 2 : Tokens.sizes.bar.innerWidth
+    implicitHeight: horizontal ? Tokens.sizes.bar.innerWidth : workspaces.layoutHeight + workspaces.anchors.margins * 2
 
     color: Colours.tPalette.m3surfaceContainer
     radius: Tokens.rounding.full
@@ -86,7 +87,7 @@ StyledClippingRect {
 
         Loader {
             asynchronous: true
-            opacity: Config.bar.workspaces.occupiedBg ? 1 : 0
+            opacity: Config.bar.workspaces.occupiedBg && !root.horizontal ? 1 : 0
             active: opacity > 0
 
             anchors.fill: parent
@@ -107,6 +108,8 @@ StyledClippingRect {
         LazyListView {
             id: workspaces
 
+            visible: !root.horizontal
+
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
@@ -116,8 +119,12 @@ StyledClippingRect {
             spacing: Tokens.spacing.extraSmall
             removeDuration: Tokens.anim.durations.expressiveDefaultEffects
 
+            // Drop the delegates while the bar is horizontal so the list is
+            // rebuilt from scratch when it becomes the vertical column again.
+            // Otherwise the delegates keep the size they had when the list was
+            // hidden and the column collapses to nothing.
             model: ScriptModel {
-                values: root.wsIds
+                values: root.horizontal ? [] : root.wsIds
             }
 
             delegate: Workspace {
@@ -134,9 +141,38 @@ StyledClippingRect {
             }
         }
 
+        // Horizontal equivalent of the list above. The workspace indicators sit
+        // in a row instead of a lazy vertical list.
+        Row {
+            id: hrow
+
+            visible: root.horizontal
+            anchors.centerIn: parent
+            spacing: Tokens.spacing.extraSmall
+
+            Repeater {
+                model: ScriptModel {
+                    values: root.wsIds
+                }
+
+                delegate: Workspace {
+                    activeWsId: root.activeWsId
+                    ws: Config.bar.workspaces.showUnoccupied ? root.groupOffset + index + 1 : modelData
+                    monitor: root.monitor
+
+                    displayType: Config.bar.workspaces.displayType
+                    showWindows: Config.bar.workspaces.showWindows
+                    iconRules: GlobalConfig.bar.workspaces.workspaceIcons
+                    activeLabel: Config.bar.workspaces.activeLabel
+                    occupiedLabel: Config.bar.workspaces.occupiedLabel
+                    label: Config.bar.workspaces.label
+                }
+            }
+        }
+
         Loader {
             asynchronous: true
-            opacity: Config.bar.workspaces.showUnoccupied ? 0 : 1
+            opacity: !root.horizontal && !Config.bar.workspaces.showUnoccupied ? 1 : 0
             active: opacity > 0
 
             anchors.fill: parent
@@ -158,7 +194,7 @@ StyledClippingRect {
             asynchronous: true
             anchors.left: workspaces.left
             anchors.right: workspaces.right
-            active: Config.bar.workspaces.activeIndicator
+            active: !root.horizontal && Config.bar.workspaces.activeIndicator
 
             sourceComponent: ActiveIndicator {
                 activeWs: {
@@ -170,9 +206,9 @@ StyledClippingRect {
         }
 
         MouseArea {
-            anchors.fill: workspaces
+            anchors.fill: root.horizontal ? hrow : workspaces
             onClicked: event => {
-                const ws = (workspaces.itemAt(event.x, event.y) as Workspace)?.ws;
+                const ws = (root.horizontal ? hrow.childAt(event.x, event.y) : workspaces.itemAt(event.x, event.y))?.ws;
                 if (!ws)
                     return;
                 if (Hypr.activeWsId !== ws)

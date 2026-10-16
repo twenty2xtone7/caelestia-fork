@@ -142,6 +142,40 @@ Singleton {
 
     property int _generation: 0
 
+    // Client-side timeout for remote engines: MyMemory occasionally stalls
+    // instead of failing, which used to leave the UI spinning forever.
+    // On timeout the in-flight generation is invalidated (a late response
+    // is then dropped as stale) and the offline phrasebook answers
+    // immediately with a timeout note.
+    property int _timeoutGen: -1
+    property string _timeoutText: ""
+    property string _timeoutSource: ""
+    property string _timeoutTarget: ""
+    readonly property int remoteTimeoutMs: 8000
+
+    Timer {
+        id: remoteTimeout
+
+        interval: root.remoteTimeoutMs
+        onTriggered: root.onRemoteTimeout()
+    }
+
+    function armTimeout(text: string, source: string, target: string, generation: int): void {
+        _timeoutText = text;
+        _timeoutSource = source;
+        _timeoutTarget = target;
+        _timeoutGen = generation;
+        remoteTimeout.restart();
+    }
+
+    function onRemoteTimeout(): void {
+        if (!translating || _timeoutGen !== _generation)
+            return;
+        const generation = ++_generation;
+        console.info(`[Translate] Request #${_timeoutGen} timed out after ${remoteTimeoutMs}ms, falling back offline`);
+        translateLocal(_timeoutText, _timeoutSource, _timeoutTarget, generation, Tr.tr("Service timed out — offline result"));
+    }
+
     // The id of the most recently started request. Readers capture the value
     // returned by translate() and match it in onFinished; older generations
     // are stale by definition.
@@ -219,11 +253,22 @@ Singleton {
             output: translated,
             from: sourceCode,
             to: targetCode,
+            detected: detectedSource,
             time: Date.now()
         };
         const next = [entry, ...history.filter(h => !(h.input === source && h.output === translated))];
         history = next.slice(0, maxHistory);
         persistHistory();
+    }
+
+    // Instant path: an identical recent translation (same text, same
+    // direction) answers immediately without touching the network.
+    function lookupCache(text: string): var {
+        for (const h of history) {
+            if (h.input === text && h.from === sourceCode && h.to === targetCode)
+                return h;
+        }
+        return null;
     }
 
     // Request-aware translation. Every call mints a new generation id and
@@ -252,6 +297,16 @@ Singleton {
             return generation;
         }
 
+        // Cache fast path: repeat of a recent translation, no network.
+        const cached = lookupCache(text);
+        if (cached) {
+            result = cached.output;
+            detectedSource = cached.detected || "";
+            error = "";
+            complete(generation);
+            return generation;
+        }
+
         if (providerId === "offline") {
             translateLocal(text, sourceCode, targetCode, generation, "");
         } else if (providerId === "google") {
@@ -269,6 +324,7 @@ Singleton {
             console.info(`[Translate] Request #${generation} ignored: stale request`);
             return;
         }
+        remoteTimeout.stop();
         root.translating = false;
         console.info(`[Translate] Request #${generation} accepted result="${root.result}" error="${root.error}"`);
         finished(generation, root.result, root.error);
@@ -281,6 +337,7 @@ Singleton {
         const pair = `${source === "auto" ? "autodetect" : source}|${target}`;
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
 
+        armTimeout(text, source, target, generation);
         Requests.get(url, (responseText, metadata) => {
             if (generation !== root._generation) {
                 console.info(`[Translate] Request #${generation} ignored: stale request`);
@@ -337,6 +394,7 @@ Singleton {
     function requestGoogle(text: string, source: string, target: string, generation: int): void {
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
 
+        armTimeout(text, source, target, generation);
         Requests.get(url, (responseText, metadata) => {
             if (generation !== root._generation) {
                 console.info(`[Translate] Request #${generation} ignored: stale request`);

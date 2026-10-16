@@ -144,14 +144,18 @@ Column {
             const p = PowerProfiles.profile;
             if (p === PowerProfile.PowerSaver)
                 return saver.icon;
-            if (p === PowerProfile.Performance)
+            if (perf.visible && p === PowerProfile.Performance)
                 return perf.icon;
             return balance.icon;
         }
 
         anchors.horizontalCenter: parent.horizontalCenter
 
-        implicitWidth: saver.implicitHeight + balance.implicitHeight + perf.implicitHeight + Tokens.padding.medium * 2 + Tokens.spacing.largeIncreased * 2
+        implicitWidth: {
+            const extra = perf.visible ? perf.implicitHeight : 0;
+            return saver.implicitHeight + balance.implicitHeight + extra
+                 + Tokens.padding.medium * 2 + Tokens.spacing.largeIncreased * 2;
+        }
         implicitHeight: Math.max(saver.implicitHeight, balance.implicitHeight, perf.implicitHeight) + Tokens.padding.small
 
         color: Colours.tPalette.m3surfaceContainer
@@ -177,13 +181,6 @@ Column {
 
                     Fill {
                         item: balance
-                    }
-                },
-                State {
-                    name: perf.icon
-
-                    Fill {
-                        item: perf
                     }
                 }
             ]
@@ -222,6 +219,7 @@ Column {
 
             profile: PowerProfile.Performance
             icon: "rocket_launch"
+            visible: PowerProfiles.profiles.indexOf(PowerProfile.Performance) >= 0
         }
     }
 

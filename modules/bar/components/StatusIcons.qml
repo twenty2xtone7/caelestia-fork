@@ -40,22 +40,25 @@ StyledRect {
         return false;
     }
 
+    readonly property bool horizontal: BarState.horizontal
+
     color: Colours.tPalette.m3surfaceContainer
     radius: Tokens.rounding.full
 
     clip: true
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: iconColumn.implicitHeight + Tokens.padding.medium * 2
+    implicitWidth: horizontal ? iconColumn.implicitWidth + Tokens.padding.medium * 2 : Tokens.sizes.bar.innerWidth
+    implicitHeight: horizontal ? Tokens.sizes.bar.innerWidth : iconColumn.implicitHeight + Tokens.padding.medium * 2
 
-    ColumnLayout {
+    GridLayout {
         id: iconColumn
 
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Tokens.padding.medium
+        anchors.centerIn: parent
 
-        spacing: 0
+        columns: root.horizontal ? -1 : 1
+        rows: root.horizontal ? 1 : -1
+
+        rowSpacing: 0
+        columnSpacing: 0
 
         Repeater {
             model: ScriptModel {
@@ -156,14 +159,17 @@ StyledRect {
         default property Item item
         property string name: modelData.id.toLowerCase()
 
-        Layout.topMargin: Math.round(topGap)
-        Layout.bottomMargin: Math.round(bottomGap)
-        Layout.alignment: Qt.AlignHCenter
+        Layout.topMargin: root.horizontal ? 0 : Math.round(topGap)
+        Layout.bottomMargin: root.horizontal ? 0 : Math.round(bottomGap)
+        Layout.leftMargin: root.horizontal ? Math.round(topGap) : 0
+        Layout.rightMargin: root.horizontal ? Math.round(bottomGap) : 0
+        Layout.alignment: root.horizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
-        implicitWidth: item?.implicitWidth ?? 0
-        implicitHeight: item?.implicitHeight ?? 0
+        // ponytail: collapse to 0 on both axes when hidden (lockStatus) — width matters in horizontal mode
+        implicitWidth: present ? (item?.implicitWidth ?? 0) : 0
+        implicitHeight: present ? (item?.implicitHeight ?? 0) : 0
 
-        children: item
+        children: item ? [item] : []
 
         Behavior on topGap {
             Anim {

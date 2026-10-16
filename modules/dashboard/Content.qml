@@ -189,6 +189,14 @@ Item {
         }
     }
 
+    // Calendar dialog overlays. MUST stay outside viewWrapper: that
+    // ClippingRectangle clips everything inside it, which previously made
+    // the scrim cover only the small calendar card and let the dialog card
+    // overflow its container. Calendar.qml requests opens via CalendarUi.
+    CalendarOverlays {
+        z: 1000
+    }
+
     Behavior on implicitWidth {
         Anim {}
     }

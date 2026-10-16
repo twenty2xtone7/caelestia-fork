@@ -15,6 +15,9 @@ Singleton {
     property bool showPreview
     property string scheme
     property string flavour
+    // Last committed (non-preview) scheme payload. The wallpaper service
+    // restores terminal colors from this when a preview is dismissed.
+    property string committedColoursJson: ""
     readonly property bool light: showPreview ? previewLight : currentLight
     property bool currentLight
     property bool previewLight
@@ -150,7 +153,10 @@ Singleton {
         path: `${Paths.state}/scheme.json`
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: root.load(text(), false)
+        onLoaded: {
+            root.committedColoursJson = text();
+            root.load(text(), false);
+        }
     }
 
     ImageAnalyser {

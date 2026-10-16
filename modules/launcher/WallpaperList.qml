@@ -2,18 +2,67 @@ pragma ComponentBehavior: Bound
 
 import "items"
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Caelestia.Config
 import qs.components.controls
 import qs.services
+import qs.utils
 
-PathView {
+Item {
     id: root
 
     required property SearchBar search
     required property var screenState
     required property var panels
     required property var content
+
+    // 0 = All, 1 = Animated (live/video), 2 = Static (image)
+    property int category: 0
+
+    // Remember the last chosen category across picker openings (and shell
+    // restarts). The view is rebuilt each time the launcher enters the
+    // wallpapers state, so this must persist outside the item.
+    FileView {
+        id: categoryStorage
+
+        printErrors: false
+        path: `${Paths.state}/launcher-wallpaper-category.txt`
+        onLoaded: {
+            const saved = parseInt(text().trim(), 10);
+            if (saved >= 0 && saved <= 2)
+                root.category = saved;
+        }
+        onLoadFailed: {
+            if (err === FileViewError.FileNotFound)
+                Qt.callLater(() => setText(String(root.category)));
+        }
+    }
+
+    onCategoryChanged: categoryStorage.setText(String(root.category))
+
+    // Forwarded PathView interface: Content.qml drives the active list
+    // through currentItem / currentIndex / count / index stepping.
+    readonly property alias currentItem: pathView.currentItem
+    readonly property alias currentIndex: pathView.currentIndex
+    readonly property alias count: pathView.count
+
+    function incrementCurrentIndex() {
+        pathView.incrementCurrentIndex();
+    }
+
+    function decrementCurrentIndex() {
+        pathView.decrementCurrentIndex();
+    }
+
+    readonly property int animatedCount: [...Wallpapers.list].filter(w => Wallpapers.isLive(w.path)).length
+    readonly property int staticCount: Wallpapers.list.length - animatedCount
+
+    // Height consumed by the category bar (chips + top margin + gap to
+    // the carousel). ContentList adds this on top of wallpaperHeight so
+    // the carousel keeps its full size instead of being squeezed.
+    readonly property real filterBarHeight: filterRow.implicitHeight + filterRow.Layout.topMargin + Tokens.spacing.small
 
     readonly property int itemWidth: Tokens.sizes.launcher.wallpaperWidth * 0.8 + Tokens.padding.medium * 2
 
@@ -44,65 +93,114 @@ PathView {
         return visible;
     }
 
-    model: ScriptModel {
+    implicitWidth: Math.min(numItems, pathView.count) * itemWidth
+
+    ScriptModel {
         id: scriptModel
 
         readonly property string search: root.search.text.split(" ").slice(1).join(" ")
 
-        values: Wallpapers.query(search)
-        onValuesChanged: root.currentIndex = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent)
+        values: {
+            const all = Wallpapers.query(search);
+            if (root.category === 1)
+                return all.filter(w => Wallpapers.isLive(w.path));
+            if (root.category === 2)
+                return all.filter(w => !Wallpapers.isLive(w.path));
+            return all;
+        }
+        onValuesChanged: pathView.currentIndex = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent)
     }
 
-    Component.onCompleted: currentIndex = Wallpapers.list.findIndex(w => w.path === Wallpapers.actualCurrent)
-    Component.onDestruction: Wallpapers.stopPreview()
-
-    onCurrentItemChanged: {
-        if (currentItem)
-            Wallpapers.preview((currentItem as WallpaperItem).modelData.path);
-    }
-
-    implicitWidth: Math.min(numItems, count) * itemWidth
-    pathItemCount: numItems
-    cacheItemCount: 4
-
-    snapMode: PathView.SnapToItem
-    preferredHighlightBegin: 0.5
-    preferredHighlightEnd: 0.5
-    highlightRangeMode: PathView.StrictlyEnforceRange
-
-    delegate: WallpaperItem {
-        screenState: root.screenState
-    }
-
-    path: Path {
-        startY: root.height / 2
-
-        PathAttribute {
-            name: "z"
-            value: 0
-        }
-        PathLine {
-            x: root.width / 2
-            relativeY: 0
-        }
-        PathAttribute {
-            name: "z"
-            value: 1
-        }
-        PathLine {
-            x: root.width
-            relativeY: 0
-        }
-    }
-
-    CustomMouseArea {
-        function onWheel(event: WheelEvent): void {
-            if (event.angleDelta.y > 0)
-                root.decrementCurrentIndex();
-            else if (event.angleDelta.y < 0)
-                root.incrementCurrentIndex();
-        }
-
+    ColumnLayout {
         anchors.fill: parent
+        spacing: Tokens.spacing.small
+
+        // Category filter: All / Animated (live video) / Static (image)
+        RowLayout {
+            id: filterRow
+
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: Tokens.spacing.small
+            spacing: Tokens.spacing.small
+
+            TextButton {
+                text: `All (${Wallpapers.list.length})`
+                type: root.category === 0 ? TextButton.Filled : TextButton.Text
+                onClicked: root.category = 0
+            }
+
+            TextButton {
+                text: `Animated (${root.animatedCount})`
+                type: root.category === 1 ? TextButton.Filled : TextButton.Text
+                onClicked: root.category = 1
+            }
+
+            TextButton {
+                text: `Static (${root.staticCount})`
+                type: root.category === 2 ? TextButton.Filled : TextButton.Text
+                onClicked: root.category = 2
+            }
+        }
+
+        PathView {
+            id: pathView
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Component.onCompleted: currentIndex = Wallpapers.list.findIndex(w => w.path === Wallpapers.actualCurrent)
+            Component.onDestruction: Wallpapers.stopPreview()
+
+            onCurrentItemChanged: {
+                if (currentItem)
+                    Wallpapers.preview((currentItem as WallpaperItem).modelData.path);
+            }
+
+            model: scriptModel
+
+            pathItemCount: root.numItems
+            cacheItemCount: 4
+
+            snapMode: PathView.SnapToItem
+            preferredHighlightBegin: 0.5
+            preferredHighlightEnd: 0.5
+            highlightRangeMode: PathView.StrictlyEnforceRange
+
+            delegate: WallpaperItem {
+                screenState: root.screenState
+            }
+
+            path: Path {
+                startY: pathView.height / 2
+
+                PathAttribute {
+                    name: "z"
+                    value: 0
+                }
+                PathLine {
+                    x: pathView.width / 2
+                    relativeY: 0
+                }
+                PathAttribute {
+                    name: "z"
+                    value: 1
+                }
+                PathLine {
+                    x: pathView.width
+                    relativeY: 0
+                }
+            }
+
+            CustomMouseArea {
+                function onWheel(event: WheelEvent): void {
+                    if (event.angleDelta.y > 0)
+                        pathView.decrementCurrentIndex();
+                    else if (event.angleDelta.y < 0)
+                        pathView.incrementCurrentIndex();
+                }
+
+                anchors.fill: parent
+            }
+        }
     }
 }

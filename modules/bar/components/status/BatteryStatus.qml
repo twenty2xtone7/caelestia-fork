@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Services.UPower
@@ -11,18 +13,23 @@ Item {
 
     required property color colour
 
+    readonly property bool horizontal: BarState.horizontal
+
     implicitWidth: layout.implicitWidth
     implicitHeight: layout.implicitHeight
 
-    ColumnLayout {
+    GridLayout {
         id: layout
 
         anchors.centerIn: parent
-        spacing: -Tokens.spacing.extraSmall
+        columns: root.horizontal ? -1 : 1
+        rows: root.horizontal ? 1 : -1
+        rowSpacing: root.horizontal ? 0 : -Tokens.spacing.extraSmall
+        columnSpacing: Tokens.spacing.extraSmall / 2
 
         MaterialIcon {
             id: batteryIcon
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: root.horizontal ? Qt.AlignVCenter : Qt.AlignHCenter
             animate: true
             text: {
                 if (!UPower.displayDevice.isLaptopBattery) {
@@ -41,7 +48,7 @@ Item {
         StyledText {
             id: batteryText
             visible: UPower.displayDevice.isLaptopBattery
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: root.horizontal ? Qt.AlignVCenter : Qt.AlignHCenter
             text: UPower.displayDevice.isLaptopBattery ? `${Math.round(UPower.displayDevice.percentage * 100)}` : ""
             font.pixelSize: 9
             font.weight: 700

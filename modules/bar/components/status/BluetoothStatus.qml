@@ -6,12 +6,15 @@ import Quickshell
 import Quickshell.Bluetooth
 import Caelestia.Config
 import qs.components
+import qs.services
 import qs.utils
 
 Item {
     id: root
 
     required property color colour
+
+    readonly property bool horizontal: BarState.horizontal
 
     implicitWidth: layout.implicitWidth
     implicitHeight: layout.implicitHeight
@@ -22,13 +25,17 @@ Item {
         }
     }
 
-    ColumnLayout {
+    GridLayout {
         id: layout
 
-        spacing: Tokens.spacing.medium / 2
+        columns: root.horizontal ? -1 : 1
+        rows: root.horizontal ? 1 : -1
+        rowSpacing: Tokens.spacing.medium / 2
+        columnSpacing: Tokens.spacing.medium / 2
 
         // Bluetooth icon
         MaterialIcon {
+            Layout.alignment: root.horizontal ? Qt.AlignVCenter : Qt.AlignHCenter
             animate: true
             text: {
                 if (!Bluetooth.defaultAdapter?.enabled) // qmllint disable unresolved-type
@@ -51,6 +58,7 @@ Item {
 
                 required property BluetoothDevice modelData
 
+                Layout.alignment: root.horizontal ? Qt.AlignVCenter : Qt.AlignHCenter
                 animate: true
                 text: Icons.getBluetoothIcon(modelData?.icon)
                 color: root.colour
@@ -67,6 +75,7 @@ Item {
                         duration: Tokens.anim.durations.large
                         easing: Tokens.anim.standardAccel
                     }
+
                     Anim {
                         from: 0
                         to: 1

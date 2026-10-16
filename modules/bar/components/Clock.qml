@@ -14,26 +14,34 @@ StyledRect {
     readonly property int padding: Config.bar.clock.background ? Tokens.padding.medium : Tokens.padding.extraSmall
     readonly property var font: Tokens.font.body.builders.small.scale(1.1)
 
+    readonly property bool horizontal: BarState.horizontal
+    readonly property int spacing: Tokens.spacing.extraSmall
+    readonly property int crossAlign: horizontal ? Qt.AlignVCenter : Qt.AlignHCenter
+
     function fontFor(text: string, metricWidth: int): font {
         // We don't count seconds for the max width because it changes too often
         const scale = text === "11" ? 1.15 : Math.min(1.05, Math.max(hourMetrics.width, minMetrics.width) / metricWidth);
         return root.font.width(scale * 100).letterSpacing(scale).build();
     }
 
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: layout.implicitHeight + root.padding * 2
+    implicitWidth: horizontal ? layout.implicitWidth + root.padding * 2 : Tokens.sizes.bar.innerWidth
+    implicitHeight: horizontal ? Tokens.sizes.bar.innerWidth : layout.implicitHeight + root.padding * 2
 
     color: Qt.alpha(Colours.tPalette.m3surfaceContainer, Config.bar.clock.background ? Colours.tPalette.m3surfaceContainer.a : 0)
     radius: Tokens.rounding.full
 
-    ColumnLayout {
+    GridLayout {
         id: layout
 
         anchors.centerIn: parent
-        spacing: Tokens.spacing.extraSmall
+
+        columns: root.horizontal ? -1 : 1
+        rows: root.horizontal ? 1 : -1
+        rowSpacing: root.spacing
+        columnSpacing: root.spacing
 
         Loader {
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: root.crossAlign
             asynchronous: true
             active: Config.bar.clock.showIcon
             visible: active
@@ -45,34 +53,39 @@ StyledRect {
         }
 
         Loader {
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: root.crossAlign
             asynchronous: true
             active: Config.bar.clock.showDate
             visible: active
 
-            sourceComponent: ColumnLayout {
-                spacing: layout.spacing - 4
+            sourceComponent: GridLayout {
+                columns: root.horizontal ? -1 : 1
+                rows: root.horizontal ? 1 : -1
+                rowSpacing: root.spacing - 4
+                columnSpacing: root.spacing - 4
 
                 StyledText {
-                    Layout.alignment: Qt.AlignHCenter
+                    Layout.alignment: root.crossAlign
                     text: Time.format("ddd")
                     font: Tokens.font.body.builders.small.scale(0.9).build()
                     color: root.colour
                 }
 
                 StyledText {
-                    Layout.alignment: Qt.AlignHCenter
+                    Layout.alignment: root.crossAlign
                     text: Time.format("d")
                     font: root.font.scale(1.1).build()
                     color: root.colour
                 }
 
                 StyledRect {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: -Tokens.padding.extraSmall
-                    Layout.rightMargin: -Tokens.padding.extraSmall
-                    Layout.topMargin: 4
-                    Layout.bottomMargin: Tokens.padding.extraSmall / 2
+                    Layout.fillWidth: !root.horizontal
+                    Layout.fillHeight: root.horizontal
+                    Layout.leftMargin: root.horizontal ? 4 : -Tokens.padding.extraSmall
+                    Layout.rightMargin: root.horizontal ? Tokens.padding.extraSmall / 2 : -Tokens.padding.extraSmall
+                    Layout.topMargin: root.horizontal ? -Tokens.padding.extraSmall : 4
+                    Layout.bottomMargin: root.horizontal ? -Tokens.padding.extraSmall : Tokens.padding.extraSmall / 2
+                    implicitWidth: 1
                     implicitHeight: 1
                     color: Colours.palette.m3outlineVariant
                 }
@@ -80,7 +93,7 @@ StyledRect {
         }
 
         StyledText {
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: root.crossAlign
             text: Time.hourStr
             font: root.fontFor(text, hourMetrics.width)
             color: root.colour
@@ -94,8 +107,8 @@ StyledRect {
         }
 
         StyledText {
-            Layout.topMargin: -parent.spacing - 4
-            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: root.horizontal ? 0 : -layout.rowSpacing - 4
+            Layout.alignment: root.crossAlign
             text: Time.minuteStr
             font: root.fontFor(text, minMetrics.width)
             color: root.colour
@@ -109,8 +122,8 @@ StyledRect {
         }
 
         Loader {
-            Layout.topMargin: -parent.spacing - 4
-            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: root.horizontal ? 0 : -layout.rowSpacing - 4
+            Layout.alignment: root.crossAlign
             asynchronous: true
             active: Config.bar.clock.showSeconds
             visible: active
@@ -130,8 +143,8 @@ StyledRect {
         }
 
         Loader {
-            Layout.topMargin: -parent.spacing - 4
-            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: root.horizontal ? 0 : -layout.rowSpacing - 4
+            Layout.alignment: root.crossAlign
             asynchronous: true
             active: Units.twelveHourClock
             visible: active

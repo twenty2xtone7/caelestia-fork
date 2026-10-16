@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Caelestia.Config
+import qs.services
 import qs.modules.bar as Bar
 
 Region {
@@ -15,10 +16,17 @@ Region {
     readonly property real borderThickness: win.contentItem.Config.border.thickness
     readonly property real clampedThickness: win.contentItem.Config.border.clampedThickness
 
-    x: bar.clampedWidth + win.dragMaskPadding
-    y: clampedThickness + win.dragMaskPadding
-    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2
-    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2
+    // Insets of the interactive region: the bar edge uses the bar's thickness,
+    // every other edge the normal border thickness.
+    readonly property real insetLeft: BarState.vertical && BarState.atStart ? bar.clampedThickness : clampedThickness
+    readonly property real insetRight: BarState.vertical && BarState.atEnd ? bar.clampedThickness : clampedThickness
+    readonly property real insetTop: BarState.horizontal && BarState.atStart ? bar.clampedThickness : clampedThickness
+    readonly property real insetBottom: BarState.horizontal && BarState.atEnd ? bar.clampedThickness : clampedThickness
+
+    x: insetLeft + win.dragMaskPadding
+    y: insetTop + win.dragMaskPadding
+    width: win.width - insetLeft - insetRight - win.dragMaskPadding * 2
+    height: win.height - insetTop - insetBottom - win.dragMaskPadding * 2
     intersection: Intersection.Xor
 
     R {
@@ -38,21 +46,21 @@ Region {
 
         panel: root.panels.sessionWrapper
         x: root.win.width - width
-        width: panel.width * (1 - root.panels.session.offsetScale) + root.borderThickness + sidebarRegion.width
+        width: panel.width * (1 - root.panels.session.offsetScale) + root.borderThickness + (BarState.sidebarOnLeft ? 0 : sidebarRegion.width)
     }
 
     R {
         id: sidebarRegion
 
         panel: root.panels.sidebar
-        x: root.win.width - width
+        x: BarState.sidebarOnLeft ? 0 : root.win.width - width
         width: panel.width * (1 - root.panels.sidebar.offsetScale) + root.borderThickness
     }
 
     R {
         panel: root.panels.osdWrapper
-        x: root.win.width - width
-        width: panel.width * (1 - root.panels.osd.offsetScale) + root.borderThickness + sessionRegion.width
+        x: BarState.osdOnLeft ? 0 : root.win.width - width
+        width: panel.width * (1 - root.panels.osd.offsetScale) + root.borderThickness + (BarState.osdOnLeft ? 0 : sessionRegion.width)
     }
 
     R {
@@ -75,8 +83,8 @@ Region {
     component R: Region {
         required property Item panel
 
-        x: panel.x + root.bar.implicitWidth
-        y: panel.y + root.borderThickness
+        x: panel.x + root.bar.panelsOffsetX
+        y: panel.y + root.bar.panelsOffsetY
         width: panel.width
         height: panel.height
         intersection: Intersection.Subtract

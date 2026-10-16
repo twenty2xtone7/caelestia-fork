@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Caelestia.Config
+import Caelestia.Services
 import qs.services
 import qs.modules.launcher.services
 import qs.utils
@@ -23,6 +24,7 @@ Scope {
             VPN;
 
         ClipboardService;
+        CalendarData;
         CommandRegistry;
         FanCtl;
         SystemMonitor;

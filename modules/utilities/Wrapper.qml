@@ -43,7 +43,10 @@ Item {
 
     states: State {
         name: "attachedToSidebar"
-        when: root.screenState.sidebar
+        // The utilities card only merges into the sidebar when they share an
+        // edge; when the sidebar flips to the left side they stay separate and
+        // the utilities keeps its own width.
+        when: root.screenState.sidebar && !BarState.sidebarOnLeft
 
         PropertyChanges {
             root.sidebarLerp: 1

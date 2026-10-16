@@ -146,21 +146,44 @@ Singleton {
         }
     }
 
+    // Bulk removal: snapshot, single reset, then teardown. Per-item
+    // close() reassigns the whole list on EVERY notification (O(n²) filter
+    // churn + binding storms + one slide animation + destroy + D-Bus
+    // dismiss each), which freezes the shell at 100-200 items. This path
+    // resets every view exactly once; teardown below is a single O(n)
+    // pass with no per-item animations or intermediate layouts.
+    // Pass match to clear only items it accepts (e.g. one app group).
+    function clearAll(match) {
+        if (list.length === 0)
+            return;
+        const doomed = [];
+        const kept = [];
+        for (const n of list) {
+            if (match === undefined || match === null || match(n))
+                doomed.push(n);
+            else
+                kept.push(n);
+        }
+        if (doomed.length === 0)
+            return;
+        list = kept;
+        for (const n of doomed) {
+            n.notification?.dismiss();
+            n.destroy();
+        }
+    }
+
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
         name: "clearNotifs"
         description: "Clear all notifications"
-        onPressed: {
-            for (const notif of root.list.slice())
-                notif.close();
-        }
+        onPressed: root.clearAll()
     }
 
     IpcHandler {
         function clear(): void {
-            for (const notif of root.list.slice())
-                notif.close();
+            root.clearAll();
         }
 
         function isDndEnabled(): bool {

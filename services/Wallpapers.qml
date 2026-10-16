@@ -41,6 +41,7 @@ Searcher {
 
     function setWallpaper(path: string): void {
         actualCurrent = path;
+        root.appliedWallpaper = true;
         if (isLive(path)) {
             liveCurrent = path;
             Qt.callLater(() => livePathStorage.setText(path));
@@ -75,13 +76,84 @@ Searcher {
         showPreview = false;
         if (previewColourLock)
             pendingPreviewClear = true;
-        else
+        else {
             Colours.showPreview = false;
+            restorePreviewTerminals();
+        }
     }
 
     onPreviewColourLockChanged: {
-        if (!previewColourLock && pendingPreviewClear)
+        if (!previewColourLock && pendingPreviewClear) {
             Colours.showPreview = false;
+            restorePreviewTerminals();
+        }
+    }
+
+    // Re-apply the committed scheme's terminal colors after previewing,
+    // unless a wallpaper was applied since (then terminals are already
+    // correct and re-blasting them would just flash stale colors).
+    function restorePreviewTerminals(): void {
+        if (root.appliedWallpaper) {
+            root.appliedWallpaper = false;
+            return;
+        }
+        // Preview ends: put terminals back on the committed scheme.
+        root.applyTerminalColours(Colours.committedColoursJson);
+    }
+
+    // Live terminal sync (dynamic scheme only). The static apply path goes
+    // through `caelestia wallpaper -f`, whose apply_colours() broadcasts
+    // terminal sequences — but previews and the live-apply path never touch
+    // the CLI, so without this terminals would freeze on the old scheme.
+    // Sequences mirror the CLI's OSC format (fg/bg/cursor/selection +
+    // palette) and are written straight to each pty, same as apply_terms.
+    property bool termSyncEnabled: true
+    property int termsSeq: 0
+    // True once setWallpaper() has run: terminals then already match (or
+    // are about to match, via the CLI) the committed scheme, so preview
+    // dismissal must NOT "restore" them — that would visibly re-blast the
+    // terminals, possibly with a stale pre-apply scheme.
+    property bool appliedWallpaper: false
+
+    readonly property string termScript: "import json, os, sys\nfrom pathlib import Path\ntry:\n    colours = json.loads(sys.argv[1])['colours']\n    def esc(*i, c):\n        h = c.lstrip('#')\n        return chr(27) + ']' + ';'.join(map(str, i)) + ';rgb:' + h[0:2] + '/' + h[2:4] + '/' + h[4:6] + chr(7)\n    seq = esc(10, c=colours['onSurface']) + esc(11, c=colours['surface']) + esc(12, c=colours['secondary']) + esc(17, c=colours['secondary'])\n    for n in range(16):\n        seq += esc(4, n, c=colours['term%d' % n])\n    seq += esc(4, 16, c=colours['primary']) + esc(4, 17, c=colours['secondary']) + esc(4, 18, c=colours['tertiary'])\n    data = seq.encode()\n    for pt in Path('/dev/pts').iterdir():\n        if pt.name.isdigit():\n            try:\n                fd = os.open(str(pt), os.O_WRONLY | os.O_NONBLOCK | os.O_NOCTTY)\n                try:\n                    os.write(fd, data)\n                finally:\n                    os.close(fd)\n            except (PermissionError, OSError, BlockingIOError):\n                pass\nexcept Exception:\n    pass\n"
+
+    FileView {
+        path: `${Paths.config}/cli.json`
+        printErrors: false
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const cfg = JSON.parse(text());
+                root.termSyncEnabled = cfg?.theme?.enableTerm ?? true;
+            } catch (e) {
+                root.termSyncEnabled = true;
+            }
+        }
+        onLoadFailed: root.termSyncEnabled = true
+    }
+
+    Process {
+        id: termsApplier
+    }
+
+    function applyTerminalColours(jsonText) {
+        if (!root.termSyncEnabled || !jsonText)
+            return;
+        let colours;
+        try {
+            const parsed = JSON.parse(jsonText);
+            colours = parsed?.colours;
+        } catch (e) {
+            return;
+        }
+        if (!colours || typeof colours !== "object")
+            return;
+        root.termsSeq++;
+        // termsSeq in argv forces a restart even when the same wallpaper
+        // is previewed twice in a row (identical JSON otherwise).
+        termsApplier.command = ["python3", "-c", root.termScript, jsonText, String(root.termsSeq)];
+        termsApplier.running = true;
     }
 
     list: wallpapers.entries
@@ -179,6 +251,8 @@ Searcher {
             onStreamFinished: {
                 Colours.load(text, true);
                 Colours.showPreview = true;
+                root.appliedWallpaper = false;
+                root.applyTerminalColours(text);
             }
         }
     }
@@ -203,6 +277,10 @@ Searcher {
         stdout: StdioCollector {
             onStreamFinished: {
                 Colours.load(text, false);
+                // Live apply bypasses the CLI, so regenerate + apply
+                // terminal colors here (static applies do it via -f).
+                Colours.committedColoursJson = text;
+                root.applyTerminalColours(text);
             }
         }
     }
@@ -218,6 +296,8 @@ Searcher {
             onStreamFinished: {
                 Colours.load(text, true);
                 Colours.showPreview = true;
+                root.appliedWallpaper = false;
+                root.applyTerminalColours(text);
             }
         }
     }

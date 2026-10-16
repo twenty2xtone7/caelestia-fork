@@ -19,28 +19,46 @@ Item {
 
     property string source: Wallpapers.current
     property CachingImage current
-    property CachingImage fadingImage
+    property Item fadingImage
+    property Item liveItem
     property bool completed
 
+    // Only one fading layer at a time: a newer switch destroys the
+    // previous fader immediately (same rule as the image path).
+    function fadeOutLayer(item) {
+        if (!item)
+            return;
+        if (fadingImage) {
+            fadingImage.destroy();
+            fadingImage = null;
+        }
+        fadingImage = item;
+        fadingImage.startFadeOut();
+    }
+
     onSourceChanged: {
-        // Fade out old image(s)
+        // Fade out old layer(s)
         if (current) {
-            // If there's already a fading image, destroy it immediately
-            if (fadingImage) {
-                fadingImage.destroy();
-                fadingImage = null;
-            }
-            fadingImage = current;
-            fadingImage.startFadeOut();
+            fadeOutLayer(current);
             current = null;
         }
-        
+        if (liveItem) {
+            fadeOutLayer(liveItem);
+            liveItem = null;
+        }
+
         if (source && !isLive(source))
             current = imgComp.createObject(this, {
                 path: source
             });
-        
-        // Live wallpapers don't need CachingImage
+
+        // Live wallpapers play in-shell and fade in on first frames,
+        // exactly like images fade in on Image.Ready.
+        if (isLive(source))
+            liveItem = vidComp.createObject(this, {
+                srcPath: source
+            });
+
         if (isLive(source))
             completed = true;
     }
@@ -50,6 +68,10 @@ Item {
             if (source && !isLive(source))
                 current = imgComp.createObject(this, {
                     path: source
+                });
+            if (isLive(source))
+                liveItem = vidComp.createObject(this, {
+                    srcPath: source
                 });
             completed = true;
         });
@@ -121,36 +143,75 @@ Item {
         }
     }
 
-    Loader {
-        id: liveLoader
-        anchors.fill: parent
-        active: root.completed && root.isLive(root.source)
-        visible: active
+    Component {
+        id: vidComp
 
-        sourceComponent: Component {
-            Item {
-                anchors.fill: parent
+        Item {
+            id: vidRoot
 
-                MediaPlayer {
-                    id: vidPlayer
-                    property string src: root.source
-                    source: src ? ("file://" + src) : ""
-                    loops: MediaPlayer.Infinite
-                    audioOutput: AudioOutput { muted: true; volume: 0 }
-                    videoOutput: vidOut
-                    autoPlay: true
+            anchors.fill: parent
+            opacity: 0
 
-                    onSrcChanged: {
-                        if (src && vidPlayer.status !== MediaPlayer.Loading) {
-                            vidPlayer.source = "file://" + src;
-                        }
+            property string srcPath: ""
+            property bool revealed: false
+
+            function startFadeOut() {
+                vidFadeIn.stop();
+                vidFadeOut.start();
+            }
+
+            MediaPlayer {
+                id: vidPlayer
+
+                source: vidRoot.srcPath ? ("file://" + vidRoot.srcPath) : ""
+                loops: MediaPlayer.Infinite
+                audioOutput: AudioOutput {
+                    muted: true
+                    volume: 0
+                }
+                videoOutput: vidOut
+                autoPlay: true
+
+                onMediaStatusChanged: {
+                    // First buffered frames: reveal, mirroring
+                    // Image.Ready on the static path. Guarded so a stale
+                    // load can't resurrect a superseded video.
+                    if (!vidRoot.revealed && root.liveItem === vidRoot
+                            && (mediaStatus === MediaPlayer.BufferedMedia || mediaStatus === MediaPlayer.LoadedMedia)) {
+                        vidRoot.revealed = true;
+                        vidFadeIn.start();
                     }
                 }
+            }
 
-                VideoOutput {
-                    id: vidOut
-                    anchors.fill: parent
-                    fillMode: VideoOutput.PreserveAspectCrop
+            VideoOutput {
+                id: vidOut
+
+                anchors.fill: parent
+                fillMode: VideoOutput.PreserveAspectCrop
+            }
+
+            Anim on opacity {
+                id: vidFadeIn
+
+                type: Anim.SlowEffects
+                running: false
+                from: 0
+                to: 1
+            }
+
+            Anim on opacity {
+                id: vidFadeOut
+
+                type: Anim.SlowEffects
+                running: false
+                // No `from`: same stale-flash rationale as the image path.
+                to: 0
+                onFinished: {
+                    if (root.fadingImage === vidRoot) {
+                        root.fadingImage.destroy();
+                        root.fadingImage = null;
+                    }
                 }
             }
         }
@@ -167,11 +228,18 @@ Item {
             opacity: 0
 
             function startFadeOut() {
+                // Stop a pending fade-in first: without this, a late
+                // Image.Ready on a stale layer restarts the fade-in and
+                // the old wallpaper flashes back mid-transition (e.g.
+                // rapid A → B → C switching resurrects B).
+                anim.stop();
                 fadeOutAnim.start();
             }
 
             onStatusChanged: {
-                if (status === Image.Ready)
+                // Only reveal while still the current layer — a stale
+                // async load must never fade a superseded wallpaper in.
+                if (status === Image.Ready && root.current === img)
                     anim.start();
             }
 
@@ -189,7 +257,8 @@ Item {
 
                 type: Anim.SlowEffects
                 running: false
-                from: 1
+                // No `from`: a never-revealed layer fades from its actual
+                // (transparent) opacity instead of flashing to 1 first.
                 to: 0
                 onFinished: {
                     if (root.fadingImage === img) {

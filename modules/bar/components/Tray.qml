@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.SystemTray
 import Caelestia.Config
@@ -16,33 +17,37 @@ StyledRect {
 
     readonly property int padding: Config.bar.tray.background ? Tokens.padding.medium : Tokens.padding.extraSmall
     readonly property int spacing: Config.bar.tray.background ? Tokens.spacing.medium : Tokens.spacing.extraSmall
+    readonly property bool horizontal: BarState.horizontal
 
     property bool expanded
 
-    readonly property real nonAnimHeight: {
+    readonly property real nonAnimLength: {
         if (!Config.bar.tray.compact)
-            return layout.implicitHeight + padding * 2;
+            return (horizontal ? layout.implicitWidth : layout.implicitHeight) + padding * 2;
+
         const pad = (Config.bar.tray.background ? Tokens.padding.extraSmall : 0) + padding;
         if (expanded)
-            return expandIcon.implicitHeight + layout.implicitHeight + spacing + pad;
-        return Math.max(Config.bar.tray.background ? width : 0, expandIcon.implicitHeight + pad);
+            return (horizontal ? expandIcon.implicitWidth + layout.implicitWidth : expandIcon.implicitHeight + layout.implicitHeight) + spacing + pad;
+        return Math.max(Config.bar.tray.background ? (horizontal ? height : width) : 0, (horizontal ? expandIcon.implicitWidth : expandIcon.implicitHeight) + pad);
     }
 
     clip: true
-    visible: height > 0
+    visible: (horizontal ? width : height) > 0
 
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: nonAnimHeight
+    implicitWidth: horizontal ? nonAnimLength : Tokens.sizes.bar.innerWidth
+    implicitHeight: horizontal ? Tokens.sizes.bar.innerWidth : nonAnimLength
 
     color: Qt.alpha(Colours.tPalette.m3surfaceContainer, (Config.bar.tray.background && items.count > 0) ? Colours.tPalette.m3surfaceContainer.a : 0)
     radius: Tokens.rounding.full
 
-    Column {
+    Grid {
         id: layout
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: root.padding
+        x: root.horizontal ? root.padding : (root.width - width) / 2
+        y: root.horizontal ? (root.height - height) / 2 : root.padding
+
+        columns: root.horizontal ? -1 : 1
+        rows: root.horizontal ? 1 : -1
         spacing: Tokens.spacing.small
 
         opacity: root.expanded || !Config.bar.tray.compact ? 1 : 0
@@ -89,35 +94,40 @@ StyledRect {
 
         asynchronous: true
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
+        x: root.horizontal ? root.width - width : (root.width - width) / 2
+        y: root.horizontal ? (root.height - height) / 2 : root.height - height
 
         active: Config.bar.tray.compact && items.count > 0
 
         sourceComponent: Item {
-            implicitWidth: expandIconInner.implicitWidth
-            implicitHeight: expandIconInner.implicitHeight - Tokens.padding.small
+            implicitWidth: root.horizontal ? expandIconInner.implicitWidth - Tokens.padding.small : expandIconInner.implicitWidth
+            implicitHeight: root.horizontal ? expandIconInner.implicitHeight : expandIconInner.implicitHeight - Tokens.padding.small
 
             MaterialIcon {
                 id: expandIconInner
 
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: Config.bar.tray.background ? Tokens.padding.extraSmall : -Tokens.padding.small
+                readonly property real edgeMargin: Config.bar.tray.background ? Tokens.padding.extraSmall : -Tokens.padding.small
+
+                x: root.horizontal ? parent.width - width - edgeMargin : (parent.width - width) / 2
+                y: root.horizontal ? (parent.height - height) / 2 : parent.height - height - edgeMargin
                 text: "expand_less"
                 color: Colours.palette.m3onSurfaceVariant
                 fontStyle: Tokens.font.icon.medium
-                rotation: root.expanded ? 180 : 0
+                rotation: root.horizontal ? (root.expanded ? 90 : -90) : (root.expanded ? 180 : 0)
 
                 Behavior on rotation {
                     Anim {}
                 }
 
-                Behavior on anchors.bottomMargin {
+                Behavior on y {
                     Anim {}
                 }
             }
         }
+    }
+
+    Behavior on implicitWidth {
+        Anim {}
     }
 
     Behavior on implicitHeight {

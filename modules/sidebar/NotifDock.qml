@@ -159,32 +159,6 @@ Item {
         }
     }
 
-    Timer {
-        id: clearTimer
-
-        repeat: true
-        triggeredOnStart: true
-        interval: Math.max(15, Math.min(80, 69.8 - 12.3 * Math.log(Notifs.notClosed.length)))
-        onTriggered: {
-            const first = Notifs.notClosed[0];
-            if (!first) {
-                stop();
-                return;
-            }
-
-            const appName = first.appName;
-            let cleared = 0;
-            for (const n of Notifs.notClosed.filter(n => n.appName === appName)) {
-                n.close();
-                cleared++;
-                if (cleared > 30) {
-                    interval = 5;
-                    return;
-                }
-            }
-        }
-    }
-
     Loader {
         asynchronous: false
         anchors.right: parent.right
@@ -200,7 +174,10 @@ Item {
 
             icon: "clear_all"
             font: Tokens.font.icon.large
-            onClicked: clearTimer.start()
+            // Instant bulk clear: the old per-group trickle timer ran one
+            // animated close() per tick, which froze the shell on 100-200
+            // notifications. Notifs.clearAll() resets everything at once.
+            onClicked: Notifs.clearAll()
 
             Elevation {
                 anchors.fill: parent
