@@ -12,6 +12,7 @@ Item {
 
     required property var workspaces
     required property int wsSpacing
+    property bool horizontal: false
 
     readonly property color colour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
     property color colourAnimated: colour
@@ -48,8 +49,9 @@ Item {
         required property int index
         required property Workspace modelData
 
-        property real topRadius: ifAdjacent(0, -1, 0, width / 2)
-        property real bottomRadius: ifAdjacent(root.workspaces.length - 1, 1, 0, width / 2)
+        readonly property real roundBy: root.horizontal ? (parent?.height ?? 0) / 2 : width / 2
+        property real topRadius: ifAdjacent(0, -1, 0, roundBy)
+        property real bottomRadius: ifAdjacent(root.workspaces.length - 1, 1, 0, roundBy)
         property real topPadding: ifAdjacent(0, -1, root.wsSpacing, 0)
         property real bottomPadding: ifAdjacent(root.workspaces.length - 1, 1, root.wsSpacing, 0)
 
@@ -59,17 +61,21 @@ Item {
             return root.workspaces[index + adj]?.isOccupied ? yes : no;
         }
 
-        anchors.left: parent?.left
-        anchors.right: parent?.right
+        anchors.left: root.horizontal ? undefined : parent?.left
+        anchors.right: root.horizontal ? undefined : parent?.right
+        anchors.top: root.horizontal ? parent?.top : undefined
+        anchors.bottom: root.horizontal ? parent?.bottom : undefined
         anchors.margins: -1
 
-        y: modelData ? modelData.y + anchors.margins - topPadding : 0
-        implicitHeight: modelData ? modelData.LazyListView.visibleHeight - anchors.margins * 2 + topPadding + bottomPadding : 0
+        x: root.horizontal ? (modelData ? modelData.x + anchors.margins - topPadding : 0) : 0
+        y: root.horizontal ? 0 : (modelData ? modelData.y + anchors.margins - topPadding : 0)
+        implicitWidth: root.horizontal ? (modelData ? modelData.width - anchors.margins * 2 + topPadding + bottomPadding : 0) : 0
+        implicitHeight: root.horizontal ? 0 : (modelData ? modelData.LazyListView.visibleHeight - anchors.margins * 2 + topPadding + bottomPadding : 0)
 
         color: Qt.alpha(root.colour, 1)
         topLeftRadius: topRadius
-        topRightRadius: topRadius
-        bottomLeftRadius: bottomRadius
+        topRightRadius: root.horizontal ? bottomRadius : topRadius
+        bottomLeftRadius: root.horizontal ? topRadius : bottomRadius
         bottomRightRadius: bottomRadius
 
         opacity: modelData?.isOccupied ? 1 : 0

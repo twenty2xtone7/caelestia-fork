@@ -12,6 +12,7 @@ StyledRect {
 
     required property Workspace activeWs
     required property Item mask
+    property bool horizontal: false
     property alias contentColour: colouriser.colorizationColor
 
     property real start
@@ -21,7 +22,8 @@ StyledRect {
         if (!activeWs)
             return;
 
-        const newStart = activeWs.LazyListView.layoutY;
+        const newStart = root.horizontal ? activeWs.x : activeWs.LazyListView.layoutY;
+        const newSize = root.horizontal ? activeWs.width : activeWs.LazyListView.preferredHeight;
         const goingUp = newStart < start;
         const leadingDuration = Tokens.anim.durations.expressiveDefaultSpatial;
         const trailingDuration = leadingDuration * (Config.bar.workspaces.activeTrail ? 1.5 : 1);
@@ -29,7 +31,7 @@ StyledRect {
         startAnim.stop();
         endAnim.stop();
         startAnim.to = newStart;
-        endAnim.to = newStart + activeWs.LazyListView.preferredHeight;
+        endAnim.to = newStart + newSize;
         startAnim.duration = goingUp ? leadingDuration : trailingDuration;
         endAnim.duration = goingUp ? trailingDuration : leadingDuration;
         startAnim.start();
@@ -40,8 +42,10 @@ StyledRect {
     Component.onCompleted: runAnim()
 
     clip: true
-    y: start + mask.y
-    implicitHeight: end - start
+    x: root.horizontal ? start + mask.x : 0
+    y: root.horizontal ? 0 : start + mask.y
+    implicitWidth: root.horizontal ? end - start : 0
+    implicitHeight: root.horizontal ? mask.height : end - start
     radius: Tokens.rounding.full
     color: Colours.palette.m3primary
 
@@ -54,6 +58,7 @@ StyledRect {
     }
 
     Connections {
+        enabled: !root.horizontal
         function onLayoutYChanged(): void {
             root.runAnim();
         }
@@ -65,6 +70,19 @@ StyledRect {
         target: root.activeWs?.LazyListView ?? null
     }
 
+    Connections {
+        enabled: root.horizontal
+        function onXChanged(): void {
+            root.runAnim();
+        }
+
+        function onWidthChanged(): void {
+            root.runAnim();
+        }
+
+        target: root.activeWs ?? null
+    }
+
     Colouriser {
         id: colouriser
 
@@ -72,11 +90,12 @@ StyledRect {
         sourceColor: Colours.palette.m3onSurface
         colorizationColor: Colours.palette.m3onPrimary
 
-        x: 0
-        y: -parent.start
+        x: root.horizontal ? -parent.start : 0
+        y: root.horizontal ? 0 : -parent.start
         implicitWidth: root.mask.width
         implicitHeight: root.mask.height
 
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenter: root.horizontal ? undefined : parent.horizontalCenter
+        anchors.verticalCenter: root.horizontal ? parent.verticalCenter : undefined
     }
 }

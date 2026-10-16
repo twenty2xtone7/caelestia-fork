@@ -18,7 +18,7 @@ StyledClippingRect {
 
     readonly property HyprlandMonitor monitor: Hypr.monitorFor(screen)
     readonly property bool onSpecial: monitor?.lastIpcObject.specialWorkspace?.name !== ""
-    readonly property int activeWsId: monitor.activeWorkspace?.id ?? 1
+    readonly property int activeWsId: Hypr.activeWsId
     readonly property int activeWsIdx: workspaceIndex(activeWsId)
     readonly property int shown: Math.max(1, Config.bar.workspaces.shown)
     readonly property bool horizontal: BarState.horizontal
@@ -46,6 +46,16 @@ StyledClippingRect {
         workspaces.itemsDirty;
         return wsIds.map(id => workspaces.itemAtIndex(workspaceIndex(id)));
     }
+
+    // Horizontal counterparts of `workspaces`: the Repeater's delegates in model
+    // order. The overlays below read each workspace's x/width from these the
+    // same way the vertical ones read y/height from the lazy list.
+    readonly property var hrowWorkspaces: {
+        root.activeWsIdx;
+        return root.wsIds.map((_, i) => hrepeater.itemAt(i));
+    }
+    readonly property var wsItems: root.horizontal ? root.hrowWorkspaces : root.workspaces
+    readonly property int wsSpacing: root.horizontal ? hrow.spacing : workspaces.spacing
 
     // Only relevant for when showUnoccupied is true
     readonly property int groupOffset: {
@@ -87,15 +97,16 @@ StyledClippingRect {
 
         Loader {
             asynchronous: true
-            opacity: Config.bar.workspaces.occupiedBg && !root.horizontal ? 1 : 0
+            opacity: Config.bar.workspaces.occupiedBg ? 1 : 0
             active: opacity > 0
 
-            anchors.fill: parent
-            anchors.margins: Tokens.padding.extraSmall
+            anchors.fill: root.horizontal ? hrow : parent
+            anchors.margins: root.horizontal ? 0 : Tokens.padding.extraSmall
 
             sourceComponent: OccupiedBg {
-                workspaces: root.workspaces
-                wsSpacing: workspaces.spacing
+                workspaces: root.wsItems
+                wsSpacing: root.wsSpacing
+                horizontal: root.horizontal
             }
 
             Behavior on opacity {
@@ -151,6 +162,8 @@ StyledClippingRect {
             spacing: Tokens.spacing.extraSmall
 
             Repeater {
+                id: hrepeater
+
                 model: ScriptModel {
                     values: root.wsIds
                 }
@@ -172,15 +185,16 @@ StyledClippingRect {
 
         Loader {
             asynchronous: true
-            opacity: !root.horizontal && !Config.bar.workspaces.showUnoccupied ? 1 : 0
+            opacity: !Config.bar.workspaces.showUnoccupied ? 1 : 0
             active: opacity > 0
 
-            anchors.fill: parent
-            anchors.margins: Tokens.padding.extraSmall
+            anchors.fill: root.horizontal ? hrow : parent
+            anchors.margins: root.horizontal ? 0 : Tokens.padding.extraSmall
 
             sourceComponent: GapMarkers {
-                workspaces: root.workspaces
-                wsSpacing: workspaces.spacing
+                workspaces: root.wsItems
+                wsSpacing: root.wsSpacing
+                horizontal: root.horizontal
             }
 
             Behavior on opacity {
@@ -192,16 +206,19 @@ StyledClippingRect {
 
         Loader {
             asynchronous: true
-            anchors.left: workspaces.left
-            anchors.right: workspaces.right
-            active: !root.horizontal && Config.bar.workspaces.activeIndicator
+            anchors.left: root.horizontal ? undefined : workspaces.left
+            anchors.right: root.horizontal ? undefined : workspaces.right
+            anchors.top: root.horizontal ? hrow.top : undefined
+            anchors.bottom: root.horizontal ? hrow.bottom : undefined
+            active: Config.bar.workspaces.activeIndicator
 
             sourceComponent: ActiveIndicator {
+                horizontal: root.horizontal
                 activeWs: {
-                    workspaces.itemsDirty;
-                    return workspaces.itemAtIndex(root.activeWsIdx) as Workspace;
+                    const item = root.horizontal ? root.hrowWorkspaces[root.activeWsIdx] as Workspace : (workspaces.itemsDirty, workspaces.itemAtIndex(root.activeWsIdx) as Workspace);
+                    return item;
                 }
-                mask: workspaces
+                mask: root.horizontal ? hrow : workspaces
             }
         }
 
