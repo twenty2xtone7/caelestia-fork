@@ -38,8 +38,8 @@ StyledRect {
         endAnim.start();
     }
 
-    onActiveWsChanged: runAnim()
-    Component.onCompleted: runAnim()
+    onActiveWsChanged: Qt.callLater(runAnim)
+    Component.onCompleted: Qt.callLater(runAnim)
 
     clip: true
     x: root.horizontal ? start + mask.x : 0
@@ -60,11 +60,11 @@ StyledRect {
     Connections {
         enabled: !root.horizontal
         function onLayoutYChanged(): void {
-            root.runAnim();
+            Qt.callLater(runAnim);
         }
 
         function onPreferredHeightChanged(): void {
-            root.runAnim();
+            Qt.callLater(runAnim);
         }
 
         target: root.activeWs?.LazyListView ?? null
@@ -73,11 +73,11 @@ StyledRect {
     Connections {
         enabled: root.horizontal
         function onXChanged(): void {
-            root.runAnim();
+            Qt.callLater(runAnim);
         }
 
         function onWidthChanged(): void {
-            root.runAnim();
+            Qt.callLater(runAnim);
         }
 
         target: root.activeWs ?? null

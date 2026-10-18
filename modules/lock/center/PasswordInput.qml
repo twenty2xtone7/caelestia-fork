@@ -30,6 +30,16 @@ StyledRect {
             forceActiveFocus();
     }
 
+    // Type without clicking: the lock surface only becomes the active window after the
+    // compositor maps it, so onCompleted alone can run too early. Grab focus on load and
+    // again whenever the surface window goes active.
+    // ponytail: no polling; if something else steals focus mid-lock, add a listener here.
+    Component.onCompleted: Qt.callLater(forceActiveFocus)
+    Window.onActiveChanged: {
+        if (Window.active)
+            Qt.callLater(forceActiveFocus);
+    }
+
     Keys.onPressed: event => {
         if (root.lock.unlocking)
             return;
