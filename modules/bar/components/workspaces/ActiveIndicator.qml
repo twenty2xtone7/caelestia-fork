@@ -17,13 +17,27 @@ StyledRect {
 
     property real start
     property real end
+    property bool orientationChanged: false
 
     function runAnim(): void {
         if (!activeWs)
             return;
 
+        if (!root.horizontal && !activeWs.LazyListView.ready && !orientationChanged)
+            return;
+
         const newStart = root.horizontal ? activeWs.x : activeWs.LazyListView.layoutY;
         const newSize = root.horizontal ? activeWs.width : activeWs.LazyListView.preferredHeight;
+
+        if (orientationChanged) {
+            orientationChanged = false;
+            startAnim.stop();
+            endAnim.stop();
+            start = newStart;
+            end = newStart + newSize;
+            return;
+        }
+
         const goingUp = newStart < start;
         const leadingDuration = Tokens.anim.durations.expressiveDefaultSpatial;
         const trailingDuration = leadingDuration * (Config.bar.workspaces.activeTrail ? 1.5 : 1);
@@ -38,13 +52,17 @@ StyledRect {
         endAnim.start();
     }
 
-    onActiveWsChanged: Qt.callLater(runAnim)
-    Component.onCompleted: Qt.callLater(runAnim)
+    onActiveWsChanged: runAnim()
+    onHorizontalChanged: {
+        orientationChanged = true;
+        runAnim();
+    }
+    Component.onCompleted: runAnim()
 
     clip: true
-    x: root.horizontal ? start + mask.x : 0
+    x: root.horizontal ? start + mask.x : (activeWs ? activeWs.x : 0)
     y: root.horizontal ? 0 : start + mask.y
-    implicitWidth: root.horizontal ? end - start : 0
+    implicitWidth: root.horizontal ? end - start : (activeWs ? activeWs.width : 0)
     implicitHeight: root.horizontal ? mask.height : end - start
     radius: Tokens.rounding.full
     color: Colours.palette.m3primary
@@ -60,11 +78,19 @@ StyledRect {
     Connections {
         enabled: !root.horizontal
         function onLayoutYChanged(): void {
-            Qt.callLater(runAnim);
+            root.runAnim();
         }
 
         function onPreferredHeightChanged(): void {
-            Qt.callLater(runAnim);
+            root.runAnim();
+        }
+
+        function onReadyChanged(): void {
+            root.runAnim();
+        }
+
+        function onTargetChanged(): void {
+            root.runAnim();
         }
 
         target: root.activeWs?.LazyListView ?? null
@@ -73,11 +99,15 @@ StyledRect {
     Connections {
         enabled: root.horizontal
         function onXChanged(): void {
-            Qt.callLater(runAnim);
+            root.runAnim();
         }
 
         function onWidthChanged(): void {
-            Qt.callLater(runAnim);
+            root.runAnim();
+        }
+
+        function onTargetChanged(): void {
+            root.runAnim();
         }
 
         target: root.activeWs ?? null
@@ -90,12 +120,9 @@ StyledRect {
         sourceColor: Colours.palette.m3onSurface
         colorizationColor: Colours.palette.m3onPrimary
 
-        x: root.horizontal ? -parent.start : 0
+        x: root.horizontal ? -parent.start : -parent.x
         y: root.horizontal ? 0 : -parent.start
         implicitWidth: root.mask.width
         implicitHeight: root.mask.height
-
-        anchors.horizontalCenter: root.horizontal ? undefined : parent.horizontalCenter
-        anchors.verticalCenter: root.horizontal ? parent.verticalCenter : undefined
     }
 }

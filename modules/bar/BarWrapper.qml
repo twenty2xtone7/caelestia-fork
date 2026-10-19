@@ -7,6 +7,7 @@ import qs.components
 import qs.services
 import qs.utils
 import qs.modules.bar.popouts as BarPopouts
+import qs.modules.bar.components
 
 Item {
     id: root
@@ -149,3 +150,4 @@ Item {
         }
     }
 }
+
