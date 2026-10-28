@@ -1,12 +1,17 @@
 pragma Singleton
 
+import QtQuick
 import Quickshell
 import Caelestia.Config
+import Caelestia.I18n
 import Caelestia.Models
 import qs.utils
+import qs.components.filedialog
 
 Searcher {
     id: root
+
+    signal installBinaryRequested
 
     function launch(entry: DesktopEntry): void {
         appDb.incrementFrequency(entry.id);
@@ -18,6 +23,21 @@ Searcher {
             });
         else
             entry.execute();
+    }
+
+    function installBinary(binaryPath: string): void {
+        if (!binaryPath)
+            return;
+        const filename = binaryPath.split('/').pop() || "";
+        const appName = filename.replace(/\.[^/.]+$/, "") || "app";
+        const desktopDir = Quickshell.env("HOME") + "/.local/share/applications";
+        
+        Quickshell.execDetached([
+            "sh", "-c",
+            `mkdir -p '${desktopDir}' && cat > '${desktopDir}/${appName}.desktop' << 'EOF'\n[Desktop Entry]\nVersion=1.0\nType=Application\nName=${appName}\nExec=${binaryPath}\nIcon=utilities-terminal\nTerminal=false\nEOF`
+        ]);
+        
+        Toaster.toast(Tr.tr("App installed"), appName, "check_circle", Toast.Success);
     }
 
     function search(search: string): var {
@@ -72,4 +92,14 @@ Searcher {
         favouriteApps: GlobalConfig.launcher.favouriteApps
         entries: DesktopEntries.applications.values.filter(a => !Strings.testRegexList(GlobalConfig.launcher.hiddenApps, a.id))
     }
+
+    FileDialog {
+        id: installerPicker
+        title: Tr.tr("Select a binary to install")
+        filterLabel: Tr.tr("Executables")
+        filters: ["*"]
+        onAccepted: (path) => root.installBinary(path)
+    }
+
+    onInstallBinaryRequested: installerPicker.open()
 }

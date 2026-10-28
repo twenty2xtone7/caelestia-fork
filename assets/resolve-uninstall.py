@@ -366,12 +366,8 @@ def main():
             continue
         owner = pacman_owner(binary)
         if not owner:
-            # Unowned binary: trash it along with the entry, but only when
-            # both live under $HOME (never system paths).
-            if under_home(path) and under_home(binary):
-                emit("home-binary", path, os.path.basename(binary),
-                     f"trash:{binary}")
-                return 0
+            # Unowned binary: only the launcher entry is removed. The
+            # binary stays (user may want it). Shown as display-only info.
             if under_home(path):
                 emit("user", path, os.path.basename(path),
                      f"bin:{binary}|unmanaged")

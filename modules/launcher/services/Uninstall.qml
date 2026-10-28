@@ -218,6 +218,8 @@ Singleton {
             return Tr.tr("Wine game folder:\n%1").arg(root.extraTrashPath(extra) || target);
         if (kind === "user") {
             const bin = root.extraBinInfo(extra ?? "");
+            if (bin && bin.owner === "unmanaged")
+                return Tr.tr("Launcher entry only\nProgram kept: %1").arg(bin.path);
             if (bin)
                 return Tr.tr("Launcher entry only\nProgram: %1 (%2)").arg(bin.path).arg(root.describeOwner(bin.owner));
             return Tr.tr("Launcher entry only (no package)");

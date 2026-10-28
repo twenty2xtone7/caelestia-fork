@@ -11,6 +11,19 @@ import qs.modules.launcher.services
 QtObject {
     id: root
 
+    signal installBinaryRequested
+
+    function handleInstallBinary(binaryPath: string, report: var): void {
+        if (!binaryPath) {
+            if (report)
+                report({ title: Tr.tr("No binary selected"), message: "", icon: "error", type: "error" });
+            return;
+        }
+        Apps.installBinary(binaryPath);
+        if (report)
+            report({ title: Tr.tr("App installed"), message: Qt.baseName(binaryPath), icon: "check_circle", type: "success" });
+    }
+
     function resolve(raw) {
         const s = (raw ?? "").trim();
         if (!s)
@@ -30,6 +43,18 @@ QtObject {
     }
 
     readonly property var commands: [
+        {
+            name: "Install",
+            aliases: ["add", "create"],
+            description: Tr.tr("Install an app from a binary file"),
+            icon: "add_circle",
+            category: Tr.tr("Applications"),
+            keepOpen: true,
+            runBare: true,
+            run: (v, report) => {
+                Apps.installBinaryRequested();
+            }
+        },
         {
             name: "Open",
             aliases: ["launch", "run"],

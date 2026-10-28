@@ -6,6 +6,7 @@ import Caelestia.Config
 import Caelestia.I18n
 import qs.components
 import qs.components.controls
+import qs.components.filedialog
 import qs.services
 import qs.modules.launcher.services
 import qs.modules.launcher
@@ -46,7 +47,7 @@ Item {
         id: listWrapper
 
         implicitWidth: list.width
-        implicitHeight: list.height + root.padding
+        implicitHeight: Math.max(list.height + root.padding, Uninstall.panelOpen ? 440 : 0)
 
         // Left-anchored (not centered) so the list never moves when the
         // detail panel expands to the right; the window grows rightward

@@ -57,7 +57,11 @@ Item {
 
             PropertyChanges {
                 root.implicitWidth: root.Tokens.sizes.launcher.itemWidth
-                root.implicitHeight: Math.min(root.maxHeight, appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight)
+                root.implicitHeight: {
+                    const contentHeight = appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight;
+                    const floor = Uninstall.panelOpen ? Tokens.sizes.launcher.itemHeight * 7 : 0;
+                    return Math.min(root.maxHeight, Math.max(floor, contentHeight));
+                }
                 appList.active: true
             }
 
