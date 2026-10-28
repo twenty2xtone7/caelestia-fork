@@ -1,34 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ==============================================================================
-# Caelestia Desktop Environment Installer
-# ==============================================================================
-# Installs the official Caelestia Shell package, then applies a custom
-# configuration from the installer's directory.
-#
-# Supported distributions:
-#   - Arch Linux / Manjaro / EndeavourOS / BlackArch  (yay / paru / pacman)
-#   - NixOS                                            (nix profile install github:caelestia-dots/shell#with-cli)
-#   - Fedora / RHEL / CentOS                          (dnf / yum)
-#   - Debian / Ubuntu / Pop!_OS / Linux Mint          (apt)
-#   - openSUSE                                        (zypper)
-#   - Void Linux                                      (xbps)
-#   - Alpine                                          (apk)
-#   - Gentoo                                          (emerge)
-#   - Fallback: build from source if no package found
-#
-# Expected layout next to this script:
-#   caelestia/          Custom Caelestia Shell configuration (or the repo root)
-#   hypr/               Optional custom Hyprland configuration
-#
-# Flow:
-#   1. Detect distribution and available package manager
-#   2. Install caelestia-shell (or build from source)
-#   3. Back up and replace ~/.config/quickshell/caelestia
-#   4. Ask whether to apply the custom Hyprland config
-# ==============================================================================
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CUSTOM_CAELESTIA="${SCRIPT_DIR}"
 CUSTOM_HYPR="${SCRIPT_DIR}/hypr"
@@ -44,9 +16,6 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 err()  { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; }
 die()  { err "$*"; exit 1; }
 
-# ------------------------------------------------------------------------------
-# 1. Distribution detection
-# ------------------------------------------------------------------------------
 detect_distro() {
   if [[ -f /etc/os-release ]]; then
     . /etc/os-release
@@ -62,15 +31,11 @@ detect_distro() {
   log "Detected distribution: $DISTRO_ID"
 }
 
-# ------------------------------------------------------------------------------
-# 2. Package installation (cross-distro)
-# ------------------------------------------------------------------------------
 install_package() {
   detect_distro
 
   local installed=0
 
-  # --- Arch family ---
   if [[ "$DISTRO_ID" =~ ^(arch|manjaro|endeavouros|blackarch|garuda|artix)$ ]] || \
      [[ "$DISTRO_LIKE" == *arch* ]]; then
     if command -v yay >/dev/null 2>&1; then
@@ -84,12 +49,10 @@ install_package() {
       warn "Falling back to source build."
     fi
 
-  # --- NixOS ---
   elif [[ "$DISTRO_ID" == "nixos" ]] || command -v nix >/dev/null 2>&1; then
     log "NixOS / Nix detected. Installing Caelestia Shell via flake..."
     nix profile install github:caelestia-dots/shell#with-cli && installed=1
 
-  # --- Fedora / RHEL ---
   elif [[ "$DISTRO_ID" =~ ^(fedora|rhel|centos|rocky|alma)$ ]] || \
        [[ "$DISTRO_LIKE" == *fedora* ]] || [[ "$DISTRO_LIKE" == *rhel* ]]; then
     if command -v dnf >/dev/null 2>&1; then
@@ -97,28 +60,23 @@ install_package() {
       warn "Falling back to source build."
     fi
 
-  # --- Debian family ---
   elif [[ "$DISTRO_ID" =~ ^(debian|ubuntu|pop|linuxmint|elementary|zorin)$ ]] || \
        [[ "$DISTRO_LIKE" == *debian* ]] || [[ "$DISTRO_LIKE" == *ubuntu* ]]; then
     log "caelestia-shell is not packaged for Debian/Ubuntu."
     warn "Falling back to source build."
 
-  # --- openSUSE ---
   elif [[ "$DISTRO_ID" =~ ^(opensuse|sles)$ ]] || [[ "$DISTRO_LIKE" == *suse* ]]; then
     log "caelestia-shell is not packaged for openSUSE."
     warn "Falling back to source build."
 
-  # --- Void ---
   elif [[ "$DISTRO_ID" == "void" ]]; then
     log "caelestia-shell is not packaged for Void Linux."
     warn "Falling back to source build."
 
-  # --- Alpine ---
   elif [[ "$DISTRO_ID" == "alpine" ]]; then
     log "caelestia-shell is not packaged for Alpine."
     warn "Falling back to source build."
 
-  # --- Gentoo ---
   elif [[ "$DISTRO_ID" == "gentoo" ]]; then
     log "caelestia-shell is not packaged for Gentoo."
     warn "Falling back to source build."
@@ -128,12 +86,10 @@ install_package() {
     warn "Falling back to source build."
   fi
 
-  # --- Fallback: build from source ---
   if [[ "$installed" -eq 0 ]]; then
     build_from_source
   fi
 
-  # Verify the binary exists
   if ! command -v qs >/dev/null 2>&1 && ! command -v quickshell >/dev/null 2>&1; then
     die "Quickshell/Caelestia was not installed successfully. Check the output above."
   fi
@@ -164,9 +120,6 @@ build_from_source() {
   log "  pip install --user caelestia"
 }
 
-# ------------------------------------------------------------------------------
-# 4. Validate custom Caelestia config
-# ------------------------------------------------------------------------------
 validate_caelestia() {
   log "Validating custom Caelestia configuration..."
 
@@ -186,7 +139,6 @@ apply_caelestia() {
   log "  Source:      $CUSTOM_CAELESTIA"
   log "  Destination: $DEST_CAELESTIA"
 
-  # Skip if source and destination are the exact same path
   if [[ "$(cd "$CUSTOM_CAELESTIA" && pwd)" == "$(cd "$DEST_CAELESTIA" 2>/dev/null && pwd)" ]]; then
     log "Source and destination are the same directory; skipping copy."
     return
@@ -204,7 +156,6 @@ apply_caelestia() {
     fi
   fi
 
-  # Copy everything except hypr, git, and backups
   mkdir -p "$DEST_CAELESTIA"
   rsync -a \
     --exclude='.git' \
@@ -213,10 +164,8 @@ apply_caelestia() {
     --exclude='*.backup*' \
     "$CUSTOM_CAELESTIA/" "$DEST_CAELESTIA/"
 
-  # Ensure ownership
   chown -R "$(id -u):$(id -g)" "$DEST_CAELESTIA" 2>/dev/null || true
 
-  # Verify
   if [[ ! -f "$DEST_CAELESTIA/shell.qml" ]]; then
     err "Verification failed: shell.qml missing after copy."
     if [[ -n "$BACKUP_CAELESTIA" && -d "$BACKUP_CAELESTIA" ]]; then
@@ -233,9 +182,6 @@ apply_caelestia() {
   fi
 }
 
-# ------------------------------------------------------------------------------
-# 5. Optional Hyprland config
-# ------------------------------------------------------------------------------
 hyprland_available() {
   [[ -d "$CUSTOM_HYPR" ]] && [[ -n "$(ls -A "$CUSTOM_HYPR" 2>/dev/null)" ]]
 }
@@ -280,7 +226,6 @@ apply_hyprland() {
     fi
   fi
 
-  # Copy contents, not the directory itself, so we merge into place
   if ! cp -a "$CUSTOM_HYPR"/. "$DEST_HYPR"/; then
     err "Failed to copy Hyprland config."
     if [[ -n "$BACKUP_HYPR" && -d "$BACKUP_HYPR" ]]; then
@@ -296,9 +241,6 @@ apply_hyprland() {
   log "  Backup: $BACKUP_HYPR"
 }
 
-# ------------------------------------------------------------------------------
-# Main
-# ------------------------------------------------------------------------------
 main() {
   log "Caelestia installer"
   log "Script directory: $SCRIPT_DIR"
