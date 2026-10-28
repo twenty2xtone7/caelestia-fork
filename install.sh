@@ -9,7 +9,7 @@ set -euo pipefail
 #
 # Supported distributions:
 #   - Arch Linux / Manjaro / EndeavourOS / BlackArch  (yay / paru / pacman)
-#   - NixOS                                            (nix profile / nix-env)
+#   - NixOS                                            (nix profile install github:caelestia-dots/shell#with-cli)
 #   - Fedora / RHEL / CentOS                          (dnf / yum)
 #   - Debian / Ubuntu / Pop!_OS / Linux Mint          (apt)
 #   - openSUSE                                        (zypper)
@@ -86,9 +86,8 @@ install_package() {
 
   # --- NixOS ---
   elif [[ "$DISTRO_ID" == "nixos" ]] || command -v nix >/dev/null 2>&1; then
-    log "Nix detected. Caelestia Shell is not in nixpkgs yet."
-    warn "You can add it via a flake or build from source."
-    warn "Falling back to source build."
+    log "NixOS / Nix detected. Installing Caelestia Shell via flake..."
+    nix profile install github:caelestia-dots/shell#with-cli && installed=1
 
   # --- Fedora / RHEL ---
   elif [[ "$DISTRO_ID" =~ ^(fedora|rhel|centos|rocky|alma)$ ]] || \
