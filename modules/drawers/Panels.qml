@@ -48,6 +48,12 @@ Item {
     anchors.topMargin: BarState.horizontal && BarState.atStart ? bar.implicitHeight : borderThickness
     anchors.bottomMargin: BarState.horizontal && BarState.atEnd ? bar.implicitHeight : borderThickness
 
+    ShellState.ComponentRef {
+        screen: root.screen
+        slot: "dynLyrics"
+        component: dynLyrics
+    }
+
     Item {
         id: osdWrapper
 
@@ -120,6 +126,11 @@ Item {
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
+    }
+
+    DynLyrics {
+        id: dynLyrics
+        screen: root.screen
     }
 
     Dashboard.Wrapper {

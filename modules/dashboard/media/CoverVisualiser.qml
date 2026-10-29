@@ -9,6 +9,7 @@ import Caelestia.Services
 import qs.components
 import qs.components.widgets
 import qs.services
+import qs.modules.bar as Bar
 
 Item {
     id: root
@@ -79,5 +80,36 @@ Item {
         shape.shape: MaterialShape.Cookie9Sided
         implicitWidth: Tokens.sizes.dashboard.mediaCoverArtSize
         implicitHeight: Tokens.sizes.dashboard.mediaCoverArtSize
+
+        StyledRect {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, 0.5)
+            opacity: hover.containsMouse ? 1 : 0
+
+            Behavior on opacity {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            StyledText {
+                anchors.centerIn: parent
+                text: "open dyn-lyrics"
+                font: Tokens.font.body.builders.small.build()
+                color: "white"
+            }
+
+            MouseArea {
+                id: hover
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    const comps = ShellState.componentsFor(root.screenState.modelData);
+                    if (comps?.dynLyrics)
+                        comps.dynLyrics.active = true;
+                    root.screenState.dashboard = false;
+                }
+            }
+        }
     }
 }
