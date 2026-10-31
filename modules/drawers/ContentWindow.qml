@@ -240,6 +240,21 @@ StyledWindow {
         }
 
         PanelBg {
+            id: dynLyricsBg
+
+            // The dynamic-island lyric panel: same shell-panel surface as the
+            // bar popouts and the dashboard, so it grows out of the edge it
+            // hangs from and merges with the bar/border strip instead of
+            // floating as a detached pill.
+            panel: panels.dynLyrics
+            deformAmount: 0.15
+            // Square corners on the attached edge; the rounded end faces the
+            // screen interior, the way a popout sits against the bar.
+            topLeftRadius: 0
+            topRightRadius: 0
+        }
+
+        PanelBg {
             id: popoutBg
 
             // Extra width to prevent vertical movement deformation partially detaching panel from bar
@@ -301,6 +316,9 @@ StyledWindow {
             }
             popouts.transform: Matrix4x4 {
                 matrix: popoutBg.deformMatrix
+            }
+            dynLyrics.transform: Matrix4x4 {
+                matrix: dynLyricsBg.deformMatrix
             }
         }
 

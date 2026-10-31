@@ -40,6 +40,7 @@ Item {
     readonly property alias utilities: utilities
     readonly property alias toasts: toasts
     readonly property alias sidebar: sidebar
+    readonly property alias dynLyrics: dynLyrics
 
     anchors.fill: parent
     anchors.margins: borderThickness

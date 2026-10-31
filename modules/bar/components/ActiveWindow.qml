@@ -26,22 +26,7 @@ Item {
         return playing ?? Players.active ?? (Players.list.length > 0 ? Players.list[0] : null);
     }
 
-    // 2. Feed global Lyrics singleton reactively whenever track changes
-    readonly property var activeTrack: player ? {
-        "artist": player.trackArtist ?? "",
-        "title": player.trackTitle ?? "",
-        "album": player.trackAlbum ?? "",
-        "length": player.length ?? 0
-    } : null
-
-    onActiveTrackChanged: {
-        if (activeTrack && activeTrack.title !== "") {
-            Lyrics.setTrack(activeTrack.artist, activeTrack.title, activeTrack.album, activeTrack.length);
-        } else {
-            Lyrics.clearTrack();
-        }
-    }
-
+    // Lyrics are fed by services/Players.qml; this only consumes them.
     readonly property bool isPlaying: root.player?.isPlaying ?? false
     readonly property real position: root.player?.position ?? 0
 
@@ -53,7 +38,13 @@ Item {
         onTriggered: root.player?.positionChanged()
     }
 
-    readonly property int currentIndex: Lyrics.hasLyrics ? Lyrics.indexForTime(root.position) : -1
+    // Read position into a local first: with the call inline inside the
+    // ternary QML does not register `root.position` as a binding dependency,
+    // so the index freezes at -1 and lyrics never appear.
+    readonly property int currentIndex: {
+        const pos = root.position;
+        return Lyrics.hasLyrics ? Lyrics.indexForTime(pos) : -1;
+    }
     readonly property string currentLyric: (currentIndex >= 0 && currentIndex < Lyrics.lyrics.length) ? Lyrics.lyrics[currentIndex].trim() : ""
     
     // Only show lyrics when horizontal, has lyrics, and actively playing with a line

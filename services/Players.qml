@@ -7,13 +7,29 @@ import Quickshell.Services.Mpris
 import Caelestia
 import Caelestia.Config
 import Caelestia.I18n
+import Caelestia.Services
 import qs.components.misc
 
 Singleton {
     id: root
 
     readonly property list<MprisPlayer> list: Mpris.players.values
-    readonly property MprisPlayer active: props.manualActive ?? list.find(p => getIdentity(p) === GlobalConfig.services.defaultPlayer) ?? list[0] ?? null
+    // A player is "real" when it reports both a title and an artist. The local
+    // "Caelestia Music" MPRIS stub reports title "Unknown" with no artist, and
+    // used to win over the player the user was actually listening to.
+    function hasMeta(player: MprisPlayer): bool {
+        return (player?.trackTitle ?? "") !== "" && (player?.trackArtist ?? "") !== "";
+    }
+
+    // Prefer the configured default player whenever it exists. A background
+    // video in Firefox and the music in Spotify both report isPlaying, and
+    // Spotify's metadata blanks out for a moment on track change; both made
+    // `active` flap, which re-requested lyrics on every flip and kept
+    // Lyrics.loading stuck at true.
+    readonly property MprisPlayer active: {
+        const preferred = list.find(p => getIdentity(p).toLowerCase() === GlobalConfig.services.defaultPlayer.toLowerCase());
+        return props.manualActive ?? preferred ?? list.find(p => p.isPlaying && hasMeta(p)) ?? list.find(p => hasMeta(p)) ?? list[0] ?? null;
+    }
     property alias manualActive: props.manualActive
 
     // Dedup key for progressive metadata (e.g. mpv-mpris/yt-dlp player fills title then artist later).
@@ -65,7 +81,56 @@ Singleton {
         Toaster.toast(Tr.tr("Now playing"), Tr.trCtx("%1 - %2", "track artist and title").arg(artist).arg(title), "music_note");
     }
 
-    onActiveChanged: lastNowPlayingKey = ""
+    property string lastLyricsKey: ""
+
+    function syncLyrics(): void {
+        const p = root.active;
+        const artist = p?.trackArtist ?? "";
+        const title = p?.trackTitle ?? "";
+
+        if (!p) {
+            if (lastLyricsKey !== "") {
+                lastLyricsKey = "";
+                Lyrics.clearTrack();
+            }
+            return;
+        }
+
+        // MPRIS blanks title/artist for a moment while a track changes. Treat
+        // that as "keep what we have", not as "clear the lyrics", or every
+        // track switch clears and re-requests twice.
+        if (!hasMeta(p))
+            return;
+
+        const key = `${artist}\0${title}`;
+        if (key === lastLyricsKey)
+            return;
+
+        lastLyricsKey = key;
+        Lyrics.setTrack(artist, title, p.trackAlbum ?? "", p.length ?? 0);
+    }
+
+    onActiveChanged: {
+        lastNowPlayingKey = "";
+        syncLyrics();
+    }
+
+    Connections {
+        ignoreUnknownSignals: true
+        target: root.active
+
+        function onTrackTitleChanged(): void {
+            root.syncLyrics();
+        }
+
+        function onTrackArtistChanged(): void {
+            root.syncLyrics();
+        }
+
+        function onPostTrackChanged(): void {
+            root.syncLyrics();
+        }
+    }
 
     Connections {
         function onPostTrackChanged(): void {

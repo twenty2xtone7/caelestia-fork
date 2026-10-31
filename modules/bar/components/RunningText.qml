@@ -22,49 +22,10 @@ Item {
         return playing ?? Players.active ?? (Players.list.length > 0 ? Players.list[0] : null);
     }
 
-    // Feed global Lyrics singleton with the resolved player's metadata
-    readonly property var activeTrack: player ? {
-        "artist": player.trackArtist ?? "",
-        "title": player.trackTitle ?? "",
-        "album": player.trackAlbum ?? "",
-        "length": player.length ?? 0
-    } : null
-
-    onActiveTrackChanged: {
-        if (activeTrack && activeTrack.title !== "") {
-            Lyrics.setTrack(activeTrack.artist, activeTrack.title, activeTrack.album, activeTrack.length);
-            console.log(`[Diagnostic] setTrack: "${activeTrack.title}" by "${activeTrack.artist}", hasLyrics=${Lyrics.hasLyrics}, loading=${Lyrics.loading}`);
-        } else {
-            Lyrics.clearTrack();
-            console.log("[Diagnostic] clearTrack called");
-        }
-    }
-
-    Connections {
-        target: Lyrics
-        function onHasLyricsChanged(): void {
-            console.log(`[Diagnostic] Lyrics.hasLyricsChanged: ${Lyrics.hasLyrics}, count=${Lyrics.lyrics.length}`);
-        }
-        function onLyricsChanged(): void {
-            console.log(`[Diagnostic] Lyrics.lyricsChanged: count=${Lyrics.lyrics.length}`);
-        }
-        function onLoadingChanged(): void {
-            console.log(`[Diagnostic] Lyrics.loadingChanged: ${Lyrics.loading}`);
-        }
-    }
-
-    Connections {
-        target: root.player
-        function onPlaybackStatusChanged(): void {
-            console.log(`[Diagnostic] player playbackStatus changed: ${root.player?.playbackStatus}`);
-        }
-    }
-    readonly property var playerPlaybackState: player?.playbackState
-    onPlayerPlaybackStateChanged: console.log(`[Diagnostic] playbackState=${playerPlaybackState}`)
+    // Lyrics are fed by services/Players.qml; this only consumes them.
 
     readonly property bool isPlaying: root.player?.playbackStatus === MprisPlaybackState.Playing
 
-    onIsPlayingChanged: console.log(`[Diagnostic] isPlaying=${isPlaying}, player=${root.player?.identity}, playbackStatus=${root.player?.playbackStatus}`)
     readonly property real position: root.player?.position ?? 0
 
     // Force position updates every 50ms during playback
@@ -75,14 +36,16 @@ Item {
         onTriggered: root.player?.positionChanged()
     }
 
-    readonly property int currentIndex: Lyrics.hasLyrics ? Lyrics.indexForTime(root.position) : -1
+    // Position into a local first: inline inside the ternary QML does not
+    // track it as a binding dependency, so the index would stay -1.
+    readonly property int currentIndex: {
+        const pos = root.position;
+        return Lyrics.hasLyrics ? Lyrics.indexForTime(pos) : -1;
+    }
     readonly property string currentLyric: (currentIndex >= 0 && currentIndex < Lyrics.lyrics.length) ? Lyrics.lyrics[currentIndex].trim() : ""
     readonly property bool showLyrics: Lyrics.hasLyrics && root.isPlaying && currentLyric !== ""
 
-    onShowLyricsChanged: console.log(`[Diagnostic] showLyrics=${showLyrics}, hasLyrics=${Lyrics.hasLyrics}, isPlaying=${isPlaying}, lyric="${currentLyric}", count=${Lyrics.lyrics.length}`)
 
-    onShowLyricsChanged: console.log(`[Diagnostic] showLyrics=${showLyrics}, hasLyrics=${Lyrics.hasLyrics}, isPlaying=${isPlaying}, lyric="${currentLyric}", player=${root.player?.identity}`)
-    onCurrentLyricChanged: console.log(`[Diagnostic] currentLyric changed: "${currentLyric}"`)
 
     // Fallback window title
     readonly property string windowTitle: {
@@ -103,7 +66,6 @@ Item {
         ? Math.max(icon.implicitHeight, titleText.implicitHeight) 
         : (icon.implicitHeight + Tokens.spacing.small + titleText.implicitWidth)
 
-    onImplicitWidthChanged: console.log(`[Diagnostic] implicitWidth=${implicitWidth}, bar.width=${bar.width}, visible=${visible}`)
 
     // App icon
     MaterialIcon {

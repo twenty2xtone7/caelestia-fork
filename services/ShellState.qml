@@ -67,6 +67,7 @@ Singleton {
         property var interactionWrapper
         property var bar
         property var panels
+        property var dynLyrics
 
         function find(name: string, rootItem: Item): var {
             return CUtils.findChild(rootItem ?? rootWindow?.contentItem, name);

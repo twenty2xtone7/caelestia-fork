@@ -14,6 +14,8 @@ import qs.modules.bar as Bar
 Item {
     id: root
 
+    required property ScreenState screenState
+
     readonly property real centerX: width / 2
     readonly property real centerY: height / 2
     readonly property real spacing: Tokens.spacing.medium
@@ -42,7 +44,7 @@ Item {
             id: bar
 
             required property int modelData
-            readonly property real value: Math.max(1e-2, Math.min(1, Audio.cava.values[modelData]))
+            readonly property real value: Math.max(1e-2, Math.min(1, Audio.cava?.values[modelData] ?? 0))
 
             readonly property real angle: modelData * 2 * Math.PI / GlobalConfig.services.visualiserBars
             readonly property real dist: shapeEdgeDist + value * root.maxMagnitude

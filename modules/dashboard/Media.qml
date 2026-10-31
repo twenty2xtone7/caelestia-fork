@@ -27,6 +27,7 @@ Item {
         CoverVisualiser {
             Layout.fillHeight: true
             implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
+            screenState: root.screenState
         }
 
         Item {

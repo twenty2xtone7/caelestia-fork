@@ -89,10 +89,6 @@ StyledRect {
             root.runAnim();
         }
 
-        function onTargetChanged(): void {
-            root.runAnim();
-        }
-
         target: root.activeWs?.LazyListView ?? null
     }
 
@@ -103,10 +99,6 @@ StyledRect {
         }
 
         function onWidthChanged(): void {
-            root.runAnim();
-        }
-
-        function onTargetChanged(): void {
             root.runAnim();
         }
 
