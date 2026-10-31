@@ -18,6 +18,7 @@ import qs.modules.nexus.pages.panels.taskbar
 import qs.modules.nexus.pages.apps
 import qs.modules.nexus.pages.services
 import qs.modules.nexus.pages.recordings
+import qs.modules.nexus.pages.dynlyrics
 
 QtObject {
     // Dynamic string URLs. Order of entries must match PageRegistry.pages;
@@ -105,6 +106,10 @@ QtObject {
         {
             url: "pages/LanguageAndRegion.qml",
             subPages: ["pages/LanguageAndRegion.qml"]
+        },
+        {
+            url: "pages/dynlyrics/DynLyricsPage.qml",
+            subPages: ["pages/dynlyrics/DynLyricsPage.qml"]
         },
         {
             url: "pages/AboutPage.qml",

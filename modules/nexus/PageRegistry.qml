@@ -95,6 +95,14 @@ QtObject {
             category: "shell"
         },
 
+        // Dyn Lyrics
+        {
+            label: Tr.tr("Lyrics"),
+            icon: "lyrics",
+            description: Tr.tr("Panel, animation, typography, behaviour"),
+            category: "shell"
+        },
+
         // About
         {
             label: Tr.tr("About"),

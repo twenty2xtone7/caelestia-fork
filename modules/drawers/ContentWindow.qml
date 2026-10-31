@@ -245,13 +245,16 @@ StyledWindow {
             // The dynamic-island lyric panel: same shell-panel surface as the
             // bar popouts and the dashboard, so it grows out of the edge it
             // hangs from and merges with the bar/border strip instead of
-            // floating as a detached pill.
+            // floating as a detached pill. It must stay in `blobGroup`: the
+            // merge is what makes the panel read as attached to the edge.
             panel: panels.dynLyrics
             deformAmount: 0.15
             // Square corners on the attached edge; the rounded end faces the
             // screen interior, the way a popout sits against the bar.
             topLeftRadius: 0
             topRightRadius: 0
+            bottomLeftRadius: DynLyricsConfig.cornerRadius
+            bottomRightRadius: DynLyricsConfig.cornerRadius
         }
 
         PanelBg {
