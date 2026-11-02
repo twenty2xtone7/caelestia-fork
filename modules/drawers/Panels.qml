@@ -132,6 +132,9 @@ Item {
     DynLyrics {
         id: dynLyrics
         screen: root.screen
+        // Ride on the bottom edge of the dashboard so it gets pushed down
+        // fluidly as the dashboard expands down from the top, never clipping.
+        y: Math.max(0, dashboard.y + dashboard.height + Tokens.spacing.small * (1 - dashboard.offsetScale))
     }
 
     Dashboard.Wrapper {

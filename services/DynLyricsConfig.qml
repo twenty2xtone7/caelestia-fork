@@ -70,6 +70,7 @@ Singleton {
 
     // ── Lyrics behaviour ─────────────────────────────────────────────────────
     property int syncOffset: 0 // ms, added on top of the backend timestamps
+    property real seekStep: 0.5 // seconds per wheel notch in the seek ruler
     property bool showPreviousAndNext: false
     property string fallbackText: ""
     property bool hidePanelWhenLyricsUnavailable: false
@@ -139,6 +140,7 @@ Singleton {
         showTrackTitle: false,
         showAlbum: false,
         syncOffset: 0,
+        seekStep: 0.5,
         showPreviousAndNext: false,
         fallbackText: "",
         hidePanelWhenLyricsUnavailable: false,
@@ -152,7 +154,7 @@ Singleton {
 
     readonly property var stringKeys: ["anchorPosition", "widthMode", "resizeEasing", "easing", "animationType", "direction", "lyricEasing", "fontFamily", "textColor", "textAlignment", "fallbackText"]
     readonly property var boolKeys: ["autoWidth", "resizeAnimation", "panelAnimationEnabled", "contentFade", "lyricsAnimationEnabled", "animateFirstLyric", "resetAnimationOnTrackChange", "textShadow", "showArtist", "showTrackTitle", "showAlbum", "showPreviousAndNext", "hidePanelWhenLyricsUnavailable", "debugMode", "showLyricIndex", "showPlaybackPosition", "showEffectiveSyncOffset", "pauseAnimationsWhenHidden", "reduceAnimations"]
-    readonly property var numberKeys: ["minWidth", "maxWidth", "fixedWidth", "expandedHeight", "collapsedHeight", "horizontalPadding", "cornerRadius", "horizontalOffset", "resizeDuration", "expansionDuration", "collapseDuration", "animationDelay", "contentRevealDelay", "contentSlideDistance", "transitionDuration", "transitionDelay", "slideDistance", "fontSize", "fontWeight", "textOpacity", "lineSpacing", "syncOffset"]
+    readonly property var numberKeys: ["minWidth", "maxWidth", "fixedWidth", "expandedHeight", "collapsedHeight", "horizontalPadding", "cornerRadius", "horizontalOffset", "resizeDuration", "expansionDuration", "collapseDuration", "animationDelay", "contentRevealDelay", "contentSlideDistance", "transitionDuration", "transitionDelay", "slideDistance", "fontSize", "fontWeight", "textOpacity", "lineSpacing", "syncOffset", "seekStep"]
 
     // Ranges double as validation: everything is clamped on load and on set.
     readonly property var ranges: ({
@@ -177,7 +179,8 @@ Singleton {
         fontWeight: [100, 900],
         textOpacity: [0, 1],
         lineSpacing: [0, 48],
-        syncOffset: [-5000, 5000]
+        syncOffset: [-5000, 5000],
+        seekStep: [0.1, 30]
     })
 
     function clampNum(v: var, lo: real, hi: real, fallback: real): real {

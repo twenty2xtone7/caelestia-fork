@@ -650,6 +650,23 @@ PageBase {
             onEditingFinished: t => root.cfg.fallbackText = t.trim()
         }
 
+        // ── Seek Bar ────────────────────────────────────────────────────────
+        SectionHeader {
+            text: Tr.tr("Seek Bar")
+        }
+
+        StepperRow {
+            first: true
+            last: true
+            label: Tr.tr("Seek step")
+            subtext: Tr.tr("Seconds the position moves per wheel notch in the seek ruler")
+            value: root.cfg.seekStep
+            from: 0.1
+            to: 30
+            stepSize: 0.5
+            onMoved: v => root.cfg.seekStep = v
+        }
+
         // ── Advanced ────────────────────────────────────────────────────────
         SectionHeader {
             text: Tr.tr("Advanced")

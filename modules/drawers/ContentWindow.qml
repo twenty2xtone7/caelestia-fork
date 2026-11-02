@@ -70,7 +70,8 @@ StyledWindow {
     // NB: dashboard must be included — the calendar dialogs contain text
     // fields, and without keyboard focus the layer-shell window never
     // receives key events (mouse still works), making typing impossible.
-    WlrLayershell.keyboardFocus: (screenState.launcher || screenState.session || screenState.dashboard) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // Ruler seeking also takes focus to allow spacebar playback control.
+    WlrLayershell.keyboardFocus: (screenState.launcher || screenState.session || screenState.dashboard || panels.dynLyrics.seeking) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 

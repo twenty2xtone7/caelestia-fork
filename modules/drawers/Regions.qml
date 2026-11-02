@@ -41,6 +41,16 @@ Region {
         height: panel.height * (1 - root.panels.launcher.offsetScale) + root.borderThickness
     }
 
+    // The dyn-lyrics pill is not anchored to an edge: it rides on the
+    // dashboard's bottom edge (see Panels.qml), so it needs its own input
+    // region or clicks fall through to the window underneath. Only claim
+    // input while it is actually shown; collapsed it is a transparent pill.
+    R {
+        panel: root.panels.dynLyrics
+        width: panel.shown ? panel.width : 0
+        height: panel.shown ? panel.height : 0
+    }
+
     R {
         id: sessionRegion
 
