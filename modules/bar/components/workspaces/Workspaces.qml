@@ -42,9 +42,9 @@ StyledClippingRect {
         return workspaces.slice(start, end).map(w => w.id);
     }
 
-    readonly property var workspaces: {
-        workspaces.itemsDirty;
-        return wsIds.map(id => workspaces.itemAtIndex(workspaceIndex(id)));
+    readonly property var vlistWorkspaces: {
+        vlist.itemsDirty;
+        return wsIds.map(id => vlist.itemAtIndex(workspaceIndex(id)));
     }
 
     // Horizontal counterparts of `workspaces`: the Repeater's delegates in model
@@ -54,8 +54,8 @@ StyledClippingRect {
         root.activeWsIdx;
         return root.wsIds.map((_, i) => hrepeater.itemAt(i));
     }
-    readonly property var wsItems: root.horizontal ? root.hrowWorkspaces : root.workspaces
-    readonly property int wsSpacing: root.horizontal ? hrow.spacing : workspaces.spacing
+    readonly property var wsItems: root.horizontal ? root.hrowWorkspaces : root.vlistWorkspaces
+    readonly property int wsSpacing: root.horizontal ? hrow.spacing : vlist.spacing
 
     // Only relevant for when showUnoccupied is true
     readonly property int groupOffset: {
@@ -77,7 +77,7 @@ StyledClippingRect {
     }
 
     implicitWidth: horizontal ? hrow.implicitWidth + Tokens.padding.extraSmall * 2 : Tokens.sizes.bar.innerWidth
-    implicitHeight: horizontal ? Tokens.sizes.bar.innerWidth : workspaces.layoutHeight + workspaces.anchors.margins * 2
+    implicitHeight: horizontal ? Tokens.sizes.bar.innerWidth : vlist.layoutHeight + vlist.anchors.margins * 2
 
     color: Colours.tPalette.m3surfaceContainer
     radius: Tokens.rounding.full
@@ -117,7 +117,7 @@ StyledClippingRect {
         }
 
         LazyListView {
-            id: workspaces
+            id: vlist
 
             visible: !root.horizontal
 
@@ -206,8 +206,8 @@ StyledClippingRect {
 
         Loader {
             asynchronous: true
-            anchors.left: root.horizontal ? undefined : workspaces.left
-            anchors.right: root.horizontal ? undefined : workspaces.right
+            anchors.left: root.horizontal ? undefined : vlist.left
+            anchors.right: root.horizontal ? undefined : vlist.right
             anchors.top: root.horizontal ? hrow.top : undefined
             anchors.bottom: root.horizontal ? hrow.bottom : undefined
             active: Config.bar.workspaces.activeIndicator
@@ -215,17 +215,17 @@ StyledClippingRect {
             sourceComponent: ActiveIndicator {
                 horizontal: root.horizontal
                 activeWs: {
-                    const item = root.horizontal ? root.hrowWorkspaces[root.activeWsIdx] as Workspace : (workspaces.itemsDirty, workspaces.itemAtIndex(root.activeWsIdx) as Workspace);
+                    const item = root.horizontal ? root.hrowWorkspaces[root.activeWsIdx] as Workspace : (vlist.itemsDirty, vlist.itemAtIndex(root.activeWsIdx) as Workspace);
                     return item;
                 }
-                mask: root.horizontal ? hrow : workspaces
+                mask: root.horizontal ? hrow : vlist
             }
         }
 
         MouseArea {
-            anchors.fill: root.horizontal ? hrow : workspaces
+            anchors.fill: root.horizontal ? hrow : vlist
             onClicked: event => {
-                const ws = (root.horizontal ? hrow.childAt(event.x, event.y) : workspaces.itemAt(event.x, event.y))?.ws;
+                const ws = (root.horizontal ? hrow.childAt(event.x, event.y) : vlist.itemAt(event.x, event.y))?.ws;
                 if (!ws)
                     return;
                 if (Hypr.activeWsId !== ws)
