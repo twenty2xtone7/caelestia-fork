@@ -28,7 +28,6 @@ Scope {
         CommandRegistry;
         FanCtl;
         SystemMonitor;
-        WorkerSupervisor;
         JobQueue;
         RainbowAnimator;
         
