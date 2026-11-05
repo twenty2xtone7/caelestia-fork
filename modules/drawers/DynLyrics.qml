@@ -507,7 +507,8 @@ Item {
             anchors.rightMargin: root.cfg.horizontalPadding
 
             clip: true
-            layer.enabled: root.cfg.textShadow
+            // ponytail: Only run shadow offscreen pass when lyrics are showing
+            layer.enabled: root.shouldShow && root.cfg.textShadow
             layer.effect: MultiEffect {
                 autoPaddingEnabled: true
                 shadowEnabled: true
@@ -961,7 +962,7 @@ Item {
                 height: parent.height
                 radius: 1
                 color: root.playColour
-                layer.enabled: true
+                layer.enabled: seekUI.visible
                 layer.effect: MultiEffect {
                     autoPaddingEnabled: true
                     shadowEnabled: true
