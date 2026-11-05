@@ -64,6 +64,8 @@ StyledRect {
     y: root.horizontal ? 0 : start + mask.y
     implicitWidth: root.horizontal ? end - start : (activeWs ? activeWs.width : 0)
     implicitHeight: root.horizontal ? mask.height : end - start
+    width: implicitWidth
+    height: implicitHeight
     radius: Tokens.rounding.full
     color: Colours.palette.m3primary
 
