@@ -19,7 +19,8 @@ Item {
     property color fallbackColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
 
     // Slight glow to separate from bg
-    layer.enabled: true
+    // ponytail: Disable offscreen FBO layers when hidden or unrendered
+    layer.enabled: root.visible && root.width > 0 && root.height > 0
     layer.effect: MultiEffect {
         shadowEnabled: true
         blurMax: 1
@@ -35,7 +36,7 @@ Item {
         id: shapeWrapper
 
         anchors.fill: parent
-        layer.enabled: true
+        layer.enabled: root.visible && root.width > 0 && root.height > 0
         opacity: root.fallbackColour.a
 
         MaterialShape {
@@ -46,8 +47,8 @@ Item {
             color: Qt.alpha(root.fallbackColour, 1)
 
             Anim on rotation {
-                running: true
-                paused: !Players.active?.isPlaying
+                running: root.visible && Players.active?.isPlaying
+                paused: !running
                 from: 360
                 to: 0
                 duration: 23500
@@ -99,7 +100,7 @@ Item {
 
         source: Players.getArtUrl(Players.active)
 
-        layer.enabled: true
+        layer.enabled: root.visible && image.status === Image.Ready && root.width > 0 && root.height > 0
         layer.effect: Mask {
             maskSource: shapeWrapper
         }
