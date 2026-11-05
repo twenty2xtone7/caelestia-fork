@@ -215,7 +215,8 @@ WlSessionLockSurface {
             radius: parent.radius
             opacity: Colours.transparency.enabled ? Colours.transparency.base : 1
 
-            layer.enabled: true
+            // ponytail: Only allocate offscreen layer when locked
+            layer.enabled: root.lock.locked
             layer.effect: MultiEffect {
                 shadowEnabled: true
                 blurMax: 15
