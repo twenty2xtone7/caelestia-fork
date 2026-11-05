@@ -25,8 +25,9 @@ Singleton {
     property int totalJobsCompleted: 0
     property int totalJobsFailed: 0
     property int totalJobsCancelled: 0
-    property var currentJobs: Object.values(_activeJobs).map(j => ({ id: j.job.id, name: j.job.name, status: j.status, progress: j.progress, startTime: j.job.startTime }))
-    property var cachedResults: Object.keys(_jobCache).map(key => ({ key: key, timestamp: _jobCache[key].timestamp, success: _jobCache[key].success }))
+    // Diagnostics properties stripped of eager reactive mappings
+    property var currentJobs: []
+    property var cachedResults: []
 
     /**
      * Submits a job to the queue.
