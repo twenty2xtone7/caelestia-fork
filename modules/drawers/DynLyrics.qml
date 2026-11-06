@@ -508,7 +508,7 @@ Item {
 
             clip: true
             // ponytail: Only run shadow offscreen pass when lyrics are showing
-            layer.enabled: root.shouldShow && root.cfg.textShadow
+            layer.enabled: root.shown && Boolean(root.cfg?.textShadow)
             layer.effect: MultiEffect {
                 autoPaddingEnabled: true
                 shadowEnabled: true
