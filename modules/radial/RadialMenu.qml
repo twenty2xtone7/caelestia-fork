@@ -44,8 +44,8 @@ Variants {
 
         visible: Radial.open && (Radial.screenName === "" || Radial.screenName === modelData.name)
 
-        readonly property real itemSize: Tokens.padding.extraLargeIncreased * 2
-        readonly property real edgePadding: Tokens.padding.extraLarge
+        readonly property real itemSize: contentItem.Tokens.padding.extraLargeIncreased * 2
+        readonly property real edgePadding: contentItem.Tokens.padding.extraLarge
 
         // Menu origin, derived from the configured anchor
         readonly property point origin: {
